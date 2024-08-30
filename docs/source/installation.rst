@@ -78,9 +78,14 @@ Testing CoSpar in a new environment
 
 In case you want to test cospar without affecting existing python packages, you can create a new conda environment and install CoSpar there::
 
-	conda create -n test_cospar python=3.8
+	conda create -n test_cospar python=3.9  # python version: 3.9, 3.10, 3.11
 	conda activate test_cospar
 	pip install cospar
+
+Sometimes, you may encounter the following error, which requires no extra handling; it will be resolved during the subsequent installation of ipykernel::
+
+	# error information:
+	ipykernel requires psutil, which is not installed
 
 Now, install jupyter notebook in this environment::
 
