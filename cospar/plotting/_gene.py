@@ -1,20 +1,13 @@
 import os
-import time
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as ssp
 import scipy.stats as stats
-import statsmodels.sandbox.stats.multicomp
-from ete3 import Tree
 from matplotlib import pyplot as plt
-from numpy.lib.twodim_base import tril_indices
-from scipy.cluster import hierarchy
 
 # from plotnine import *
 from sklearn.manifold import SpectralEmbedding
 
-from cospar import tool as tl
 from cospar.plotting import _utils as pl_util
 
 from .. import help_functions as hf

@@ -2,14 +2,9 @@ import os
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as ssp
-import scipy.stats as stats
 import seaborn as sns
-import statsmodels.sandbox.stats.multicomp
-from ete3 import Tree
 from matplotlib import pyplot as plt
 from scipy.cluster import hierarchy
-from sklearn.manifold import SpectralEmbedding
 
 from .. import help_functions as hf
 from .. import logging as logg
@@ -696,7 +691,7 @@ def visualize_tree(
         Figure directory.
     """
 
-    from ete3 import AttrFace, NodeStyle, Tree, TreeStyle, faces
+    from ete3 import AttrFace, NodeStyle, TreeStyle, faces
     from IPython.display import Image, display
 
     def layout(node):

@@ -2,15 +2,12 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 import scipy.sparse as ssp
 
 from .. import help_functions as hf
 from .. import logging as logg
 from .. import plotting as pl
-from .. import settings
-from .. import tool as tl
 
 
 def generate_similarity_matrix(

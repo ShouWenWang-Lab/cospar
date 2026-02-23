@@ -2,7 +2,6 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 import scipy.sparse as ssp
 from tqdm import tqdm
@@ -12,7 +11,6 @@ from cospar.tmap import _utils as tmap_util
 from .. import help_functions as hf
 from .. import logging as logg
 from .. import settings
-from .. import tool as tl
 from .optimal_transport import optimal_transport_duality_gap, transport_stablev2
 
 

@@ -1,19 +1,16 @@
 import os
-import time
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as ssp
 import scipy.stats
-import statsmodels.sandbox.stats.multicomp
-from fastcluster import linkage
 from matplotlib import pyplot as plt
 from scanpy import read  # So that we can call this function in cospar directly
 from scipy.optimize import fmin
 from scipy.spatial.distance import pdist
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.metrics import pairwise
-from sklearn.neighbors import NearestNeighbors, kneighbors_graph
+from sklearn.neighbors import kneighbors_graph
 from tqdm import tqdm
 
 from .. import logging as logg
@@ -45,6 +42,7 @@ def get_dge_SW(ad, mask1, mask2, min_frac_expr=0.05, pseudocount=1):
     df: :class:`pandas.DataFrame`
         A pandas dataFrame, with columns: `gene`, `pv`, `mean_1`, `mean_2`, `ratio`
     """
+    import statsmodels.sandbox.stats.multicomp
 
     gene_mask = (
         (ad.X[mask1, :] > 0).sum(0).A.squeeze() / mask1.sum() > min_frac_expr
@@ -820,6 +818,25 @@ def add_neighboring_cells_to_a_map(initial_idx, adata, neighbor_N=5):
 
 
 def get_hierch_order(hm, dist_metric="euclidean", linkage_method="ward"):
+    """
+    This is used to order the barcode in generating the barcode heatmap.
+    """
+    from scipy.cluster.hierarchy import leaves_list, linkage
+    from scipy.spatial.distance import pdist
+
+    # 1. Calculate pairwise distances
+    D = pdist(hm, metric=dist_metric)
+
+    # 2. Perform hierarchical/agglomerative clustering
+    Z = linkage(D, method=linkage_method)
+
+    # 3. Extract the optimal leaf ordering directly from the linkage matrix
+    o = leaves_list(Z)
+
+    return o
+
+
+def get_hierch_order_v0(hm, dist_metric="euclidean", linkage_method="ward"):
     """
     This is used to order the barcode in generating the barcode heatmap.
     """

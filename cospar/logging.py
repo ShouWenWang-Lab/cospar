@@ -6,7 +6,7 @@ from platform import python_version
 from sys import stdout
 from time import time as get_time
 
-from anndata.logging import get_memory_usage, print_memory_usage
+from anndata.logging import get_memory_usage
 
 from . import settings
 

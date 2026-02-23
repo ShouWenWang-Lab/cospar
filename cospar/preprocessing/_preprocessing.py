@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os
-import time
-from pathlib import Path, PurePath
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -540,17 +538,17 @@ def get_X_clone(
         )
     else:
         if reference_clone_id is None:
-            logg.info('reorder clones')
-            reference_clone_id_1=np.array(reference_clone_id_1)
-            orig_order=reference_clone_id_1
-            new_order=sorted(reference_clone_id_1)
-            reorder_index=[]
+            logg.info("reorder clones")
+            reference_clone_id_1 = np.array(reference_clone_id_1)
+            orig_order = reference_clone_id_1
+            new_order = sorted(reference_clone_id_1)
+            reorder_index = []
             for i, x in enumerate(new_order):
-                j0=np.nonzero(orig_order==x)[0][0]
+                j0 = np.nonzero(orig_order == x)[0][0]
                 reorder_index.append(j0)
 
-            X_clone=X_clone[:,reorder_index]
-            reference_clone_id_1=reference_clone_id_1[reorder_index]
+            X_clone = X_clone[:, reorder_index]
+            reference_clone_id_1 = reference_clone_id_1[reorder_index]
         adata.obsm["X_clone"] = X_clone
         adata.uns["clone_id"] = reference_clone_id_1
 

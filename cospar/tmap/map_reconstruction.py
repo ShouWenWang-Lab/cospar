@@ -4,8 +4,6 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
-import scanpy as sc
 import scipy.sparse as ssp
 
 from cospar.tmap import _tmap_core as tmap_core
@@ -142,8 +140,7 @@ def infer_Tmap_from_multitime_clones(
         clonal_time_points_all = list(clonal_time_points) + [later_time_point]
         clonal_time_points_all = list(set(clonal_time_points_all))
     else:
-        clonal_time_points_all=clonal_time_points
-
+        clonal_time_points_all = clonal_time_points
 
     hf.check_input_parameters(
         adata_orig,
@@ -220,10 +217,10 @@ def infer_Tmap_from_multitime_clones(
 
     else:
         # compute transition map between initial time points and the later time point
-        #sel_id = np.nonzero(np.in1d(clonal_time_points, later_time_point))[0][0]
+        # sel_id = np.nonzero(np.in1d(clonal_time_points, later_time_point))[0][0]
         if later_time_point in clonal_time_points:
             clonal_time_points.remove(later_time_point)
-        initial_time_points = clonal_time_points #[:sel_id]
+        initial_time_points = clonal_time_points  # [:sel_id]
 
         time_info_orig = np.array(adata_orig.obs["time_info"])
         sp_idx = np.zeros(adata_orig.shape[0], dtype=bool)
@@ -261,8 +258,6 @@ def infer_Tmap_from_multitime_clones(
         intraclone_transition_map = np.zeros(
             (len(Tmap_cell_id_t1), len(Tmap_cell_id_t2))
         )
-
-
 
         logg.info(
             "------Infer transition map between initial time points and the later time one------"
