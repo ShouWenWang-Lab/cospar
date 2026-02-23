@@ -68,6 +68,73 @@ class Tree:
     def __repr__(self):
         return self.write()
 
+    def __str__(self):
+        """Overrides the default print() behavior to output a horizontal ASCII tree."""
+        return self.get_ascii(show_internal=False)
+
+    def get_ascii(self, show_internal=False):
+        """Generates a horizontal ASCII art representation of the tree topology."""
+        lines, _ = self._build_ascii_horizontal(show_internal)
+        return "\n".join(lines)
+
+    def _build_ascii_horizontal(self, show_internal):
+        """Recursively builds the 2D character grid for the tree."""
+        name = str(self.name) if self.name else ""
+        if not show_internal and not self.is_leaf():
+            name = ""
+
+        # Base case: Leaf node
+        if self.is_leaf():
+            return [f"-{name}"], 0
+
+        child_blocks = []
+
+        # Recursively get the ASCII blocks for all children
+        for child in self.children:
+            block, mid = child._build_ascii_horizontal(show_internal)
+            child_blocks.append((block, mid))
+
+        # Stack the child blocks vertically
+        stacked = []
+        actual_mids = []
+        for block, mid in child_blocks:
+            actual_mids.append(len(stacked) + mid)
+            stacked.extend(block)
+
+        first_mid = actual_mids[0]
+        last_mid = actual_mids[-1]
+        parent_mid = (first_mid + last_mid) // 2
+
+        res = []
+        # Draw the vertical connections and attach the parent node
+        for i, line in enumerate(stacked):
+            # Determine the structural character for this row
+            if i == first_mid and i == last_mid:
+                char = "-"
+            elif i == first_mid:
+                char = "/"
+            elif i == last_mid:
+                char = "\\"
+            elif first_mid < i < last_mid:
+                char = "|"
+            else:
+                char = " "
+
+            # If a child node sits exactly on this row, draw a horizontal connector
+            is_node = i in actual_mids
+            right_conn = "-" if is_node else " "
+            connection = f"{char}{right_conn}"
+
+            # Anchor the parent's name to the calculated vertical midpoint
+            if i == parent_mid:
+                prefix = f"{name}--"
+            else:
+                prefix = " " * (len(name) + 2)
+
+            res.append(prefix + connection + line)
+
+        return res, parent_mid
+
     def write(self):
         """Returns the tree in basic Newick format."""
         dist_str = f":{self.dist}" if self.dist is not None and self.dist != 0.0 else ""
