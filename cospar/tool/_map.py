@@ -175,12 +175,12 @@ def fate_coupling(
     """
     Compute fate coupling determined by the transition map.
 
-    We use the fate map :math:`P_i(\mathcal{C}_l)` towards a set of
-    fate clusters :math:`\{\mathcal{C}_l, l=0,1,2...\}` to compute the
+    We use the fate map :math:`P_i(\\mathcal{C}_l)` towards a set of
+    fate clusters :math:`\\{\\mathcal{C}_l, l=0,1,2...\}` to compute the
     fate coupling :math:`Y_{ll'}`.
 
-    * If method='SW': we first obtain :math:`Y_{ll'}=\sum_i P_i(\mathcal{C}_l)P_i(\mathcal{C}_{l'})`.
-      Then, we normalize the the coupling: :math:`Y_{ll'}\leftarrow Y_{ll'}/\sqrt{Y_{ll}Y_{l'l'}}`.
+    * If method='SW': we first obtain :math:`Y_{ll'}=\\sum_i P_i(\\mathcal{C}_l)P_i(\\mathcal{C}_{l'})`.
+      Then, we normalize the the coupling: :math:`Y_{ll'}\\leftarrow Y_{ll'}/\\sqrt{Y_{ll}Y_{l'l'}}`.
 
     * If method='Weinreb', we calculate the normalized
       covariance as in :func:`~cospar.tl.get_normalized_covariance`
@@ -203,8 +203,8 @@ def fate_coupling(
         A list of time points to further restrict the cell states to plot.
         The default choice is not to constrain the cell states to show.
     fate_map_method: `str`, optional (default: 'sum')
-        Method to obtain the fate probability map :math:`P_i(\mathcal{C})` towards a set
-        of states annotated with fate :math:`\mathcal{C}`. Available options:
+        Method to obtain the fate probability map :math:`P_i(\\mathcal{C})` towards a set
+        of states annotated with fate :math:`\\mathcal{C}`. Available options:
         {'sum', 'norm-sum'}. See :func:`.fate_map`.
     method: `str`, optional (default: 'SW')
         Method to normalize the coupling matrix: {'SW', 'Weinreb','Jaccard'}.
@@ -463,21 +463,21 @@ def fate_map(
     Compute transition probability to given fate/ancestor clusters.
 
     Given a transition map :math:`T_{ij}`, we explore build
-    the fate map :math:`P_i(\mathcal{C})` towards a set of states annotated with
-    fate :math:`\mathcal{C}` in the following ways.
+    the fate map :math:`P_i(\\mathcal{C})` towards a set of states annotated with
+    fate :math:`\\mathcal{C}` in the following ways.
 
-    Step 1: Map normalization: :math:`T_{ij}\leftarrow T_{ij}/\sum_j T_{ij}`.
+    Step 1: Map normalization: :math:`T_{ij}\\leftarrow T_{ij}/\\sum_j T_{ij}`.
 
-    Step 2: If `map_backward=False`, perform matrix transpose :math:`T_{ij} \leftarrow T_{ji}`.
+    Step 2: If `map_backward=False`, perform matrix transpose :math:`T_{ij} \\leftarrow T_{ji}`.
 
-    Step 3: aggregate fate probabiliteis within a given cluster :math:`\mathcal{C}`:
+    Step 3: aggregate fate probabiliteis within a given cluster :math:`\\mathcal{C}`:
 
-    * method='sum': :math:`P_i(\mathcal{C})=\sum_{j\in \mathcal{C}} T_{ij}`.
+    * method='sum': :math:`P_i(\\mathcal{C})=\\sum_{j\in \\mathcal{C}} T_{ij}`.
       This gives the intuitive meaning of fate probability.
 
     * method='norm-sum': We normalize the map from 'sum' method within a cluster, i.e.
-      :math:`P_i(\mathcal{C})\leftarrow P_i(\mathcal{C})/\sum_j P_j(\mathcal{C})`.
-      This gives the probability that a fate cluster :math:`\mathcal{C}` originates
+      :math:`P_i(\\mathcal{C})\\leftarrow P_i(\\mathcal{C})/\\sum_j P_j(\\mathcal{C})`.
+      This gives the probability that a fate cluster :math:`\\mathcal{C}` originates
       from an initial state :math:`i`.
 
     Parameters
@@ -495,10 +495,10 @@ def fate_map(
     map_backward: `bool`, optional (default: True)
         If `map_backward=True`, show fate properties of initial cell states :math:`i`;
         otherwise, show progenitor properties of later cell states :math:`j`.
-        This is used for building the fate map :math:`P_i(\mathcal{C})`. See :func:`.fate_map`.
+        This is used for building the fate map :math:`P_i(\\mathcal{C})`. See :func:`.fate_map`.
     method: `str`, optional (default: 'norm-sum')
-        Method to obtain the fate probability map :math:`P_i(\mathcal{C})` towards a set
-        of states annotated with fate :math:`\mathcal{C}`. Available options:
+        Method to obtain the fate probability map :math:`P_i(\\mathcal{C})` towards a set
+        of states annotated with fate :math:`\\mathcal{C}`. Available options:
         {'sum', 'norm-sum'}. See :func:`.fate_map`.
     fate_count: `bool`, optional (default: False)
         Used to determine the method for computing the fate potential of a state.
@@ -668,10 +668,10 @@ def fate_bias(
     Compute fate bias to given two fate clusters (A, B).
 
     Given a fate map :math:`P_i` towards two fate clusters
-    :math:`\{\mathcal{A}, \mathcal{B}\}`, constructed according
+    :math:`\\{\\mathcal{A}, \\mathcal{B}\}`, constructed according
     to :func:`.fate_map`, we compute the fate bias of state :math:`i` as
-    :math:`[P(\mathcal{A})+c_0]/[P(\mathcal{A})+P(\mathcal{B})+2c_0]`,
-    where :math:`c_0=a * \max_{i,\mathcal{C}} P_i(\mathcal{C})`
+    :math:`[P(\\mathcal{A})+c_0]/[P(\\mathcal{A})+P(\\mathcal{B})+2c_0]`,
+    where :math:`c_0=a * \\max_{i,\\mathcal{C}} P_i(\\mathcal{C})`
     is a re-scaled pseudocount, with :math:`a` given by pseudo_count.
 
     Parameters
@@ -689,10 +689,10 @@ def fate_bias(
     map_backward: `bool`, optional (default: True)
         If `map_backward=True`, show fate properties of initial cell states :math:`i`;
         otherwise, show progenitor properties of later cell states :math:`j`.
-        This is used for building the fate map :math:`P_i(\mathcal{C})`. See :func:`.fate_map`.
+        This is used for building the fate map :math:`P_i(\\mathcal{C})`. See :func:`.fate_map`.
     method: `str`, optional (default: 'norm-sum')
-        Method to obtain the fate probability map :math:`P_i(\mathcal{C})` towards a set
-        of states annotated with fate :math:`\mathcal{C}`. Available options:
+        Method to obtain the fate probability map :math:`P_i(\\mathcal{C})` towards a set
+        of states annotated with fate :math:`\\mathcal{C}`. Available options:
         {'sum', 'norm-sum'}. See :func:`.fate_map`.
     sum_fate_prob_thresh: `float`, optional (default: 0.05)
         The fate bias of a state is plotted only when it has a cumulative fate
@@ -782,11 +782,11 @@ def progenitor(
     Given fate bias :math:`Q_i` for a state :math:`i` as defined in :func:`.fate_bias`,
     the selected ancestor population satisfies:
 
-       * :math:`P_i(\mathcal{A})+P_i(\mathcal{B})` > sum_fate_prob_thresh;
+       * :math:`P_i(\\mathcal{A})+P_i(\\mathcal{B})` > sum_fate_prob_thresh;
 
-       * Ancestor population for fate :math:`\mathcal{A}` satisfies :math:`Q_i` > bias_threshold_A
+       * Ancestor population for fate :math:`\\mathcal{A}` satisfies :math:`Q_i` > bias_threshold_A
 
-       * Ancestor population for fate :math:`\mathcal{B}` satisfies :math:`Q_i` < bias_threshold_B
+       * Ancestor population for fate :math:`\\mathcal{B}` satisfies :math:`Q_i` < bias_threshold_B
 
     Parameters
     ----------
@@ -802,10 +802,10 @@ def progenitor(
     map_backward: `bool`, optional (default: True)
         If `map_backward=True`, show fate properties of initial cell states :math:`i`;
         otherwise, show progenitor properties of later cell states :math:`j`.
-        This is used for building the fate map :math:`P_i(\mathcal{C})`. See :func:`.fate_map`.
+        This is used for building the fate map :math:`P_i(\\mathcal{C})`. See :func:`.fate_map`.
     method: `str`, optional (default: 'norm-sum')
-        Method to obtain the fate probability map :math:`P_i(\mathcal{C})` towards a set
-        of states annotated with fate :math:`\mathcal{C}`. Available options:
+        Method to obtain the fate probability map :math:`P_i(\\mathcal{C})` towards a set
+        of states annotated with fate :math:`\\mathcal{C}`. Available options:
         {'sum', 'norm-sum'}. See :func:`.fate_map`.
     bias_threshold_A: `float`, optional (default: 0), range: (0,1)
         The threshold for selecting ancestor population for fate A.
@@ -926,7 +926,7 @@ def iterative_differentiation(
     map_backward: `bool`, optional (default: True)
         If `map_backward=True`, show fate properties of initial cell states :math:`i`;
         otherwise, show progenitor properties of later cell states :math:`j`.
-        This is used for building the fate map :math:`P_i(\mathcal{C})`. See :func:`.fate_map`.
+        This is used for building the fate map :math:`P_i(\\mathcal{C})`. See :func:`.fate_map`.
     map_threshold: `float`, optional (default: 0.1)
         Relative threshold in the range [0,1] for truncating the fate map
         towards the cluster. Only states above the threshold will be selected.

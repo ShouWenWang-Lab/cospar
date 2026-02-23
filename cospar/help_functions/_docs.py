@@ -32,13 +32,13 @@ map_backward = """\
 map_backward: `bool`, optional (default: True)
     If `map_backward=True`, show fate properties of initial cell states :math:`i`;
     otherwise, show progenitor properties of later cell states :math:`j`.
-    This is used for building the fate map :math:`P_i(\mathcal{C})`. See :func:`.fate_map`.\
+    This is used for building the fate map :math:`P_i(\\mathcal{C})`. See :func:`.fate_map`.\
 """
 
 fate_method = """\
 method: `str`, optional (default: 'norm-sum')
-    Method to obtain the fate probability map :math:`P_i(\mathcal{C})` towards a set
-    of states annotated with fate :math:`\mathcal{C}`. Available options:
+    Method to obtain the fate probability map :math:`P_i(\\mathcal{C})` towards a set
+    of states annotated with fate :math:`\\mathcal{C}`. Available options:
     {'sum', 'norm-sum'}. See :func:`.fate_map`.\
 """
 

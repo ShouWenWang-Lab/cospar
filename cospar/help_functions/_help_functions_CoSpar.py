@@ -327,8 +327,8 @@ def get_pca(E, base_ix=[], numpc=50, keep_sparse=False, normalize=True, random_s
             Z = E
         pca = PCA(n_components=numpc, random_state=random_state)
 
-    pca.fit(Z[base_ix, :])
-    return pca.transform(Z)
+    pca.fit(np.asarray(Z[base_ix, :]))
+    return pca.transform(np.asarray(Z))
 
 
 ########## GENE FILTERING
@@ -837,24 +837,6 @@ def get_hierch_order(hm, dist_metric="euclidean", linkage_method="ward"):
     # 3. Extract the optimal leaf ordering directly from the linkage matrix
     o = leaves_list(Z)
 
-    return o
-
-
-def get_hierch_order_v0(hm, dist_metric="euclidean", linkage_method="ward"):
-    """
-    This is used to order the barcode in generating the barcode heatmap.
-    """
-    np.random.seed(0)
-    D = pdist(hm, dist_metric)
-    Z = linkage(D, linkage_method)
-    n = len(Z) + 1
-    cache = dict()
-    for k in range(len(Z)):
-        c1, c2 = int(Z[k][0]), int(Z[k][1])
-        c1 = [c1] if c1 < n else cache.pop(c1)
-        c2 = [c2] if c2 < n else cache.pop(c2)
-        cache[n + k] = c1 + c2
-    o = np.array(cache[2 * len(Z)])
     return o
 
 

@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.sparse as ssp
 
+from ..help_functions.tree_utils import Tree
+
 from .. import help_functions as hf
 from .. import logging as logg
 
@@ -13,12 +15,12 @@ def get_normalized_covariance(data, method="Weinreb"):
     a state id or a barcode id, while :math:`l` is a id for fate cluster.
     We want to compute the coupling :math:`Y_{ll'}` between two fate clusters.
 
-    * If method='SW': we first obtain :math:`Y_{ll'}=\sum_i X_{il}X_{il'}`.
-      Then, we normalize the the coupling: :math:`Y_{ll'}\leftarrow Y_{ll'}/\sqrt{Y_{ll}Y_{l'l'}}`.
+    * If method='SW': we first obtain :math:`Y_{ll'}=\\sum_i X_{il}X_{il'}`.
+      Then, we normalize the the coupling: :math:`Y_{ll'}\\leftarrow Y_{ll'}/\sqrt{Y_{ll}Y_{l'l'}}`.
 
     * If method='Weinreb', we first compute the mean over variable :math:`i`, i.e., :math:`X^*_l`.
-      Then, the covariance: :math:`Y_{ll'}=\sum_i (X_{il}-X^*_l)(X_{il'}-X^*_{l'})`.
-      Finally, normalization by mean: :math:`Y_{ll'}\leftarrow Y_{ll'}/(X^*_lX^*_{l'})`.
+      Then, the covariance: :math:`Y_{ll'}=\\sum_i (X_{il}-X^*_l)(X_{il'}-X^*_{l'})`.
+      Finally, normalization by mean: :math:`Y_{ll'}\\leftarrow Y_{ll'}/(X^*_lX^*_{l'})`.
       This method is developed to infer lineage coupling from clonal data
       (Weinreb & Klein, 2021, PNAS).
 
@@ -73,8 +75,6 @@ def get_normalized_covariance(data, method="Weinreb"):
 
 
 def convert_to_tree(parent_map, celltype_names):
-    from ete3 import Tree
-
     child_map = {
         i: [] for i in set(list(parent_map.values()) + list(parent_map.keys()))
     }

@@ -1,4 +1,5 @@
 from ._help_functions_CoSpar import *
+from .tree_utils import Tree
 
 __all__ = [
     "get_dge_SW",
@@ -42,4 +43,5 @@ __all__ = [
     "parse_output_choices",
     "rename_list",
     "check_input_parameters",
+    "Tree",
 ]

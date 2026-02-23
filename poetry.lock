@@ -367,17 +367,6 @@ files = [
 ]
 
 [[package]]
-name = "ete3"
-version = "3.1.3"
-description = "A Python Environment for (phylogenetic) Tree Exploration"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "ete3-3.1.3.tar.gz", hash = "sha256:06a3b7fa8ed90187b076a8dbbe5b1b62acee94201d3c6e822f55f449601ef6f2"},
-]
-
-[[package]]
 name = "exceptiongroup"
 version = "1.2.2"
 description = "Backport of PEP 654 (exception groups)"
@@ -2285,4 +2274,4 @@ test = ["big-O", "importlib-resources ; python_version < \"3.9\"", "jaraco.funct
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9"
-content-hash = "1b7ab0459aab9979718f11df20289bab3dfec7978ddb75e280b6cbc6083fb236"
+content-hash = "55447fe38324d9999794c6b5b0a61e35cdaa9b1321c629b32939778afb18ac38"
