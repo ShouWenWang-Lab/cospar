@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 from matplotlib import pyplot as plt
-
-# from plotnine import *
 from sklearn.manifold import SpectralEmbedding
 
 from cospar.plotting import _utils as pl_util
@@ -24,11 +22,9 @@ def gene_expression_dynamics(
     invert_PseudoTime=False,
     mask=None,
     compute_new=True,
-    gene_exp_percentile=99,
     n_neighbors=8,
-    plot_raw_data=False,
-    stat_smooth_method="loess",
-    ggplot_font_size=11,
+    gene_exp_percentile=99,  # Keep this for normalization
+    plot_raw_data=False,  # Keep this for plotting raw points vs. lines
 ):
     """
     Plot gene trend along the inferred dynamic trajectory.
@@ -72,16 +68,8 @@ def gene_expression_dynamics(
         Plot the raw gene expression values of each cell along the pseudotime.
     stat_smooth_method: `str`, optional (default: 'loess')
         Smooth method used in the ggplot. Current available choices are:
-        'auto' (Use loess if (n<1000), glm otherwise),
-        'lm' (Linear Model),
-        'wls' (Linear Model),
-        'rlm' (Robust Linear Model),
-        'glm' (Generalized linear Model),
-        'gls' (Generalized Least Squares),
-        'lowess' (Locally Weighted Regression (simple)),
-        'loess' (Locally Weighted Regression),
-        'mavg' (Moving Average),
-        'gpr' (Gaussian Process Regressor)}.
+        'auto' (Use loess if (n<1000), glm otherwise), etc.
+        This parameter is no longer used after removing plotnine.
     """
 
     if mask == None:
@@ -198,69 +186,65 @@ def gene_expression_dynamics(
                     point_size=point_size,
                 )
                 # customized_embedding(x_emb[final_id],y_emb[final_id],PseudoTime,ax=ax1,title='Pseudo time')
-                Clb = fig.colorbar(
+                _ = fig.colorbar(
                     plt.cm.ScalarMappable(cmap=plt.cm.Reds), ax=ax1, label="Pseudotime"
                 )
                 plt.tight_layout()
                 fig.savefig(
                     os.path.join(
                         figure_path,
-                        f"{data_des}_fate_trajectory_pseudoTime_{fate_name}.{settings.file_format_figs}",
+                        f"{data_des}_fate_trajectory_pseudotime_{fate_name}.{settings.file_format_figs}",
                     )
                 )
+                plt.close(fig)
 
-                temp_dict = {"PseudoTime": PseudoTime}
+                # Matplotlib plotting for gene expression dynamics
+                fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+                sort_indices = np.argsort(PseudoTime)
+                sorted_pseudotime = PseudoTime[sort_indices]
+
                 for gene_name in gene_name_list:
                     yy_max = np.percentile(
                         adata.obs_vector(gene_name), gene_exp_percentile
                     )  # global blackground
                     yy = np.array(adata.obs_vector(gene_name)[sel_cell_idx])
                     rescaled_yy = (
-                        yy * prob_0[sel_cell_idx] / yy_max
-                    )  # rescaled by global background
-                    temp_dict[gene_name] = rescaled_yy
-
-                from plotnine import (
-                    aes,
-                    geom_point,
-                    ggplot,
-                    labs,
-                    stat_smooth,
-                    theme_classic,
-                )
-
-                data2 = pd.DataFrame(temp_dict)
-                data2_melt = pd.melt(
-                    data2, id_vars=["PseudoTime"], value_vars=gene_name_list
-                )
-                gplot = (
-                    ggplot(
-                        data=data2_melt,
-                        mapping=aes(x="PseudoTime", y="value", color="variable"),
+                        yy
+                        * prob_0[sel_cell_idx]
+                        / yy_max  # rescaled by global background
                     )
-                    + (
-                        geom_point()
-                        if plot_raw_data
-                        else stat_smooth(method=stat_smooth_method)
-                    )
-                    + theme_classic(base_size=ggplot_font_size)
-                    + labs(
-                        x="Pseudotime",
-                        y="Normalized gene expression",
-                        color="Gene name",
-                    )
-                )
+                    sorted_rescaled_yy = rescaled_yy[sort_indices]
 
-                gplot.save(
+                    if plot_raw_data:
+                        ax.scatter(
+                            sorted_pseudotime,
+                            sorted_rescaled_yy,
+                            label=gene_name,
+                            s=point_size,
+                            alpha=0.5,
+                        )
+                    else:
+                        ax.plot(
+                            sorted_pseudotime,
+                            sorted_rescaled_yy,
+                            label=gene_name,
+                            alpha=0.8,
+                        )
+
+                ax.set_xlabel("Pseudotime")
+                ax.set_ylabel("Normalized gene expression")
+                ax.legend(title="Gene name", bbox_to_anchor=(1.05, 1), loc="upper left")
+                ax.set_title(f"Gene Expression Dynamics for {fate_name}")
+                plt.tight_layout()
+
+                fig.savefig(
                     os.path.join(
                         figure_path,
                         f"{data_des}_fate_trajectory_pseutoTime_gene_expression_{fate_name}.{settings.file_format_figs}",
                     ),
-                    width=fig_width,
-                    height=fig_height,
-                    verbose=False,
+                    bbox_inches="tight",
                 )
-                gplot.draw()
+                plt.close(fig)
 
 
 def gene_expression_heatmap(
