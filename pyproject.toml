@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cospar"
-version = "0.4.1"
+version = "0.5.0"
 description = "A toolkit for dynamic inference of cell fate by integrating state and lineage information."
 authors = ["Shou-Wen Wang <wangshouwen@westlake.edu.cn>"]
 readme = "README.rst"
