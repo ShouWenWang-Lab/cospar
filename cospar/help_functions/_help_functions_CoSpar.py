@@ -1014,7 +1014,7 @@ def update_time_ordering(adata, updated_ordering=None, mode="force"):
 
     time_info = list(set(adata.obs["time_info"]))
     if updated_ordering is not None:
-        N_match = np.sum(np.in1d(time_info, updated_ordering))
+        N_match = np.sum(np.isin(time_info, updated_ordering))
         if (len(updated_ordering) != N_match) or (
             len(updated_ordering) != len(time_info)
         ):
@@ -1032,7 +1032,7 @@ def update_time_ordering(adata, updated_ordering=None, mode="force"):
     if mode == "auto":
         if "time_ordering" in adata.uns.keys():
             time_ordering_0 = adata.uns["time_ordering"]
-            N_match = np.sum(np.in1d(time_info, time_ordering_0))
+            N_match = np.sum(np.isin(time_info, time_ordering_0))
             if (len(time_ordering_0) != N_match) or (
                 len(time_ordering_0) != len(time_info)
             ):
@@ -1236,7 +1236,7 @@ def check_available_clonal_info(adata):
             clonal_time_points.append(xx)
 
     time_ordering = adata.uns["time_ordering"]
-    sel_idx_temp = np.in1d(time_ordering, clonal_time_points)
+    sel_idx_temp = np.isin(time_ordering, clonal_time_points)
     clonal_time_points = time_ordering[sel_idx_temp]
     adata.uns["clonal_time_points"] = clonal_time_points
 
@@ -1511,7 +1511,7 @@ def check_input_parameters(adata, **kwargs):
 
     if "initial_time_points" in keys:
         initial_time_points = kwargs["initial_time_points"]
-        N_valid_time = np.sum(np.in1d(time_ordering, initial_time_points))
+        N_valid_time = np.sum(np.isin(time_ordering, initial_time_points))
         if (N_valid_time != len(initial_time_points)) or (N_valid_time < 1):
             raise ValueError(
                 f"The 'initial_time_points' are not all valid. Please select from {time_ordering}"
@@ -1519,7 +1519,7 @@ def check_input_parameters(adata, **kwargs):
 
     if "clonal_time_points" in keys:
         clonal_time_points = kwargs["clonal_time_points"]
-        N_valid_time = np.sum(np.in1d(clonal_time_points_0, clonal_time_points))
+        N_valid_time = np.sum(np.isin(clonal_time_points_0, clonal_time_points))
         if (N_valid_time != len(clonal_time_points)) or (N_valid_time < 2):
             raise ValueError(
                 f"Selected time points are not all among {clonal_time_points_0}, or less than 2 time points are selected. Computation aborted!"

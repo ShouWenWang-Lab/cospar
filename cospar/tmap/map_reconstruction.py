@@ -183,7 +183,7 @@ def infer_Tmap_from_multitime_clones(
 
         # order the clonal time points
         # time_ordering = adata_orig.uns["time_ordering"]
-        # sel_idx_temp = np.in1d(time_ordering, clonal_time_points)
+        # sel_idx_temp = np.isin(time_ordering, clonal_time_points)
         # clonal_time_points = time_ordering[sel_idx_temp]
 
         logg.info("Step 1: Select time points")
@@ -217,7 +217,7 @@ def infer_Tmap_from_multitime_clones(
 
     else:
         # compute transition map between initial time points and the later time point
-        # sel_id = np.nonzero(np.in1d(clonal_time_points, later_time_point))[0][0]
+        # sel_id = np.nonzero(np.isin(clonal_time_points, later_time_point))[0][0]
         if later_time_point in clonal_time_points:
             clonal_time_points.remove(later_time_point)
         initial_time_points = clonal_time_points  # [:sel_id]
@@ -521,7 +521,7 @@ def infer_Tmap_from_one_time_clones(
         )
 
     if later_time_point is None:
-        sel_idx_temp = np.in1d(time_ordering, clonal_time_points_0)
+        sel_idx_temp = np.isin(time_ordering, clonal_time_points_0)
         later_time_point = time_ordering[sel_idx_temp][-1]
 
     if type(later_time_point) == list:
@@ -530,10 +530,10 @@ def infer_Tmap_from_one_time_clones(
     # use the last clonal later time point
 
     if initial_time_points is None:
-        sel_id_temp = np.nonzero(np.in1d(time_ordering, [later_time_point]))[0][0]
+        sel_id_temp = np.nonzero(np.isin(time_ordering, [later_time_point]))[0][0]
         initial_time_points = time_ordering[:sel_id_temp]
 
-    sel_idx_temp = np.in1d(time_ordering, initial_time_points)
+    sel_idx_temp = np.isin(time_ordering, initial_time_points)
     initial_time_points = list(time_ordering[sel_idx_temp])
     if later_time_point in initial_time_points:
         logg.warn(f"remove {later_time_point} from initial_time_points")
@@ -736,11 +736,11 @@ def infer_Tmap_from_state_info_alone(
 
     if initial_time_points is None:
         # use the time points preceding the last one.
-        sel_id_temp = np.nonzero(np.in1d(time_ordering, [later_time_point]))[0][0]
+        sel_id_temp = np.nonzero(np.isin(time_ordering, [later_time_point]))[0][0]
         initial_time_points = time_ordering[:sel_id_temp]
     else:
         # re-order time points. This also gets rid of invalid time points
-        sel_idx_temp = np.in1d(time_ordering, initial_time_points)
+        sel_idx_temp = np.isin(time_ordering, initial_time_points)
         if np.sum(sel_idx_temp) > 0:
             initial_time_points = time_ordering[sel_idx_temp]
         else:
@@ -832,7 +832,7 @@ def infer_Tmap_from_one_time_clones_twoTime(
 
     time_info_orig = np.array(adata_orig.obs["time_info"])
     sort_time_point = np.sort(list(set(time_info_orig)))
-    N_valid_time = np.sum(np.in1d(sort_time_point, selected_two_time_points))
+    N_valid_time = np.sum(np.isin(sort_time_point, selected_two_time_points))
     if N_valid_time != 2:
         logg.error(f"Must select only two time points among the list {sort_time_point}")
         # The second time point in this list (not necessarily later time point) is assumed to have clonal data.")
@@ -1061,10 +1061,10 @@ def infer_Tmap_from_clonal_info_alone_private(
                 f"Used uni-potent clone fraction {len(sel_unipotent_clone_id)/clone_annot.shape[1]}"
             )
 
-        idx_t1 = np.nonzero(np.in1d(cell_id_t1_all, cell_id_t1_temp))[0]
-        idx_t2 = np.nonzero(np.in1d(cell_id_t2_all, cell_id_t2_temp))[0]
-        idx_t1_temp = np.nonzero(np.in1d(cell_id_t1_temp, cell_id_t1_all))[0]
-        idx_t2_temp = np.nonzero(np.in1d(cell_id_t2_temp, cell_id_t2_all))[0]
+        idx_t1 = np.nonzero(np.isin(cell_id_t1_all, cell_id_t1_temp))[0]
+        idx_t2 = np.nonzero(np.isin(cell_id_t2_all, cell_id_t2_temp))[0]
+        idx_t1_temp = np.nonzero(np.isin(cell_id_t1_temp, cell_id_t1_all))[0]
+        idx_t2_temp = np.nonzero(np.isin(cell_id_t2_temp, cell_id_t2_all))[0]
         T_map[idx_t1[:, np.newaxis], idx_t2] = T_map_temp[idx_t1_temp][:, idx_t2_temp].A
 
     T_map = T_map.astype(int)
@@ -1145,7 +1145,7 @@ def infer_Tmap_from_clonal_info_alone(
     )
     # order the clonal time points
     time_ordering = adata_orig.uns["time_ordering"]
-    sel_idx_temp = np.in1d(time_ordering, clonal_time_points)
+    sel_idx_temp = np.isin(time_ordering, clonal_time_points)
     clonal_time_points = time_ordering[sel_idx_temp]
 
     if later_time_point is None:
@@ -1163,7 +1163,7 @@ def infer_Tmap_from_clonal_info_alone(
             f"Infer transition map between initial time points and the later time point."
         )
         # compute transition map between initial time points and the later time point
-        sel_id = np.nonzero(np.in1d(clonal_time_points, later_time_point))[0][0]
+        sel_id = np.nonzero(np.isin(clonal_time_points, later_time_point))[0][0]
         initial_time_points = clonal_time_points[:sel_id]
 
         time_info_orig = np.array(adata_orig.obs["time_info"])

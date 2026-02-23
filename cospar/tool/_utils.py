@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.sparse as ssp
-from ete3 import Tree
 
 from .. import help_functions as hf
 from .. import logging as logg
@@ -74,6 +73,8 @@ def get_normalized_covariance(data, method="Weinreb"):
 
 
 def convert_to_tree(parent_map, celltype_names):
+    from ete3 import Tree
+
     child_map = {
         i: [] for i in set(list(parent_map.values()) + list(parent_map.keys()))
     }
@@ -192,7 +193,7 @@ def compute_fate_probability_map(
 
     state_annote_1 = state_annote_0.copy()
     for j1, new_cluster_id in enumerate(mega_cluster_list):
-        idx = np.in1d(state_annote_0, valid_fate_list[j1])
+        idx = np.isin(state_annote_0, valid_fate_list[j1])
         state_annote_1[idx] = new_cluster_id
 
     state_annote_BW = state_annote_1[cell_id_t2]

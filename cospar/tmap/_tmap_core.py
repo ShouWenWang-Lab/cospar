@@ -378,10 +378,10 @@ def infer_Tmap_from_multitime_clones_private(
     data_path = settings.data_path
 
     ######### check whether we need to extend the map space
-    ratio_t1 = np.sum(np.in1d(Tmap_cell_id_t1, clonal_cell_id_t1)) / len(
+    ratio_t1 = np.sum(np.isin(Tmap_cell_id_t1, clonal_cell_id_t1)) / len(
         Tmap_cell_id_t1
     )
-    ratio_t2 = np.sum(np.in1d(Tmap_cell_id_t2, clonal_cell_id_t2)) / len(
+    ratio_t2 = np.sum(np.isin(Tmap_cell_id_t2, clonal_cell_id_t2)) / len(
         Tmap_cell_id_t2
     )
     if (ratio_t1 == 1) and (ratio_t2 == 1):

@@ -796,7 +796,7 @@ def single_cell_transition(
 
         selected_state_id_list = np.array(selected_state_id_list)
         full_id_list = np.arange(len(cell_id_t1))
-        valid_idx = np.in1d(full_id_list, selected_state_id_list)
+        valid_idx = np.isin(full_id_list, selected_state_id_list)
         if np.sum(valid_idx) < len(selected_state_id_list):
             logg.error(f"Valid id is a integer, ranged in (0,{len(cell_id_t1)-1}).")
             selected_state_id_list = full_id_list[valid_idx]

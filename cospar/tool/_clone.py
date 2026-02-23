@@ -373,7 +373,7 @@ def coarse_grain_clone_over_cell_clusters(
                     fates_t = df_time_state[df_time_state["time_info"] == t][
                         "mega_state"
                     ].unique()
-                    sel_idx = np.in1d(mega_cluster_list, fates_t)
+                    sel_idx = np.isin(mega_cluster_list, fates_t)
 
                     norm_X_cluster_clone_t = norm_X_cluster[sel_idx] / (
                         norm_X_cluster[sel_idx].sum(0)[np.newaxis, :] + pseudocount

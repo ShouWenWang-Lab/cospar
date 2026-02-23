@@ -259,7 +259,7 @@ def clones_on_manifold(
 
     selected_clone_list = np.array(selected_clone_list)
     full_id_list = np.arange(X_clone.shape[1])
-    valid_idx = np.in1d(full_id_list, selected_clone_list)
+    valid_idx = np.isin(full_id_list, selected_clone_list)
     if np.sum(valid_idx) < len(selected_clone_list):
         logg.error(
             f"Valid id range is (0,{X_clone.shape[1]-1}). Please use a smaller ID!"

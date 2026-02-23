@@ -311,7 +311,7 @@ def remove_cell_cycle_correlated_genes(
     else:
         gene_list = np.array(adata.var_names)
 
-        cycling_gene_idx = np.in1d(gene_list, cycling_gene_list)
+        cycling_gene_idx = np.isin(gene_list, cycling_gene_list)
         if np.sum(cycling_gene_idx) != len(cycling_gene_list):
             logg.error(
                 f"Provided cyclcing genes: {cycling_gene_list}\n"
@@ -351,7 +351,7 @@ def remove_cell_cycle_correlated_genes(
                     f"Remove {np.sum(~noCycle_idx)} cell cycle correlated genes."
                 )
 
-                highvar_genes_noCycle_idx = np.in1d(gene_list, highvar_genes_noCycle)
+                highvar_genes_noCycle_idx = np.isin(gene_list, highvar_genes_noCycle)
                 adata.var["highly_variable"] = highvar_genes_noCycle_idx
                 logg.info("adata.var['highly_variable'] updated")
 
@@ -608,7 +608,7 @@ def refine_state_info_by_leiden_clustering(
     if type(selected_values) == str:
         selected_values = [selected_values]
 
-    if np.sum(np.in1d(selected_values, available_time_points)) != len(selected_values):
+    if np.sum(np.isin(selected_values, available_time_points)) != len(selected_values):
         logg.error(
             f"Selected time points not available. Please select from {available_time_points}"
         )

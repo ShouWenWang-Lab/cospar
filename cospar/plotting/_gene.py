@@ -345,8 +345,8 @@ def gene_expression_heatmap(
     ) = hf.analyze_selected_fates(state_info, selected_fates)
     gene_full = np.array(adata.var_names)
     gene_list = np.array(gene_list)
-    sel_idx = np.in1d(gene_full, gene_list)
-    valid_sel_idx = np.in1d(gene_list, gene_full)
+    sel_idx = np.isin(gene_full, gene_list)
+    valid_sel_idx = np.isin(gene_list, gene_full)
 
     if np.sum(valid_sel_idx) > 0:
         cleaned_gene_list = gene_list[valid_sel_idx]
