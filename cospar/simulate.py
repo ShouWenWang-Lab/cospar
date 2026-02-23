@@ -7,7 +7,7 @@ import scipy.sparse as ssp
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from . import hf, settings, tl
+from . import settings, tl
 
 
 def sigma(x, diff_sigma):

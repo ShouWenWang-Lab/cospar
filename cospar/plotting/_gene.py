@@ -152,8 +152,6 @@ def gene_expression_dynamics(
                     PseudoTime = np.load(file_name)
                 else:
 
-                    from sklearn import manifold
-
                     data_matrix = adata.obsm["X_pca"][sel_cell_idx]
                     method = SpectralEmbedding(n_components=1, n_neighbors=n_neighbors)
                     PseudoTime = method.fit_transform(data_matrix)

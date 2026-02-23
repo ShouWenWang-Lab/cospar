@@ -1,24 +1,7 @@
-import os
-import time
-from logging import raiseExceptions
-
 import numpy as np
 import pandas as pd
-import scipy.sparse as ssp
-import scipy.stats as stats
-import statsmodels.sandbox.stats.multicomp
-from ete3 import Tree
-from matplotlib import pyplot as plt
-from scipy.cluster import hierarchy
-
-# from plotnine import *
-from sklearn.manifold import SpectralEmbedding
-
-from cospar.tool import _utils as tl_util
 
 from .. import help_functions as hf
-from .. import logging as logg
-from .. import settings
 
 
 def differential_genes(

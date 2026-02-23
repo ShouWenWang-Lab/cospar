@@ -1,18 +1,6 @@
-import os
-import time
-from logging import raiseExceptions
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as ssp
-import scipy.stats as stats
-import statsmodels.sandbox.stats.multicomp
-from ete3 import Tree
-from matplotlib import pyplot as plt
-from scipy.cluster import hierarchy
-
-# from plotnine import *
-from sklearn.manifold import SpectralEmbedding
 
 from cospar.tool import _clone, _utils
 
@@ -300,7 +288,6 @@ def fate_coupling(
                     tmp = X_sub[np.triu_indices_from(X_sub, k=1)]
                 X_coupling[j, k] = np.median(tmp)
 
-
         if normalized_X_similarity:
             diag_temp = np.sqrt(np.diag(X_coupling))
             for j in range(len(diag_temp)):
@@ -308,10 +295,10 @@ def fate_coupling(
                     X_coupling[j, k] = X_coupling[j, k] / (diag_temp[j] * diag_temp[k])
                     X_coupling[k, j] = X_coupling[j, k]
 
-            max_value=np.max(X_coupling)
+            max_value = np.max(X_coupling)
             for j in range(len(diag_temp)):
-                X_coupling[j,j]=max_value
-            X_coupling=X_coupling/max_value
+                X_coupling[j, j] = max_value
+            X_coupling = X_coupling / max_value
         fate_names = mega_cluster_list
 
     else:

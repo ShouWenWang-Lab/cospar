@@ -1340,7 +1340,7 @@ def update_data_description(adata, append_info=None, data_des=None):
 
 
 def set_up_folders(data_path_new=None, figure_path_new=None):
-    from pathlib import Path, PurePath
+    from pathlib import Path
 
     if data_path_new is not None:
         settings.data_path = data_path_new

@@ -326,13 +326,17 @@ def _check_datafile_present_and_download(path, backup_url):
         logg.info(f"creating directory {path.parent} for saving data")
         path.parent.mkdir(parents=True)
 
-    _download(backup_url, path)
-    return True
+    try:
+        _download(backup_url, path)
+        return True
+    except Exception as e:
+        logg.warn(f"Failed to download data: {e}")
+        return False
 
 
 def _download(url: str, path: Path):
     try:
-        import ipywidgets
+        import ipywidgets  # noqa: F401
         from tqdm.auto import tqdm
     except ImportError:
         from tqdm import tqdm
