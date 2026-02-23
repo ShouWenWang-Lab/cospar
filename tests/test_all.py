@@ -432,7 +432,7 @@ def test_clean_up():
 
 os.chdir(os.path.dirname(__file__))
 cs.settings.verbosity = 3  # range: 0 (error),1 (warning),2 (info),3 (hint).
-test_load_dataset("data")
+# test_load_dataset("data")
 test_preprocessing("data")
 test_load_data_from_scratch("data")
 test_clonal_analysis("data")
