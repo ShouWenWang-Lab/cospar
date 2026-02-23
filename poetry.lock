@@ -1860,40 +1860,6 @@ maintenance = ["conda-lock (==3.0.1)"]
 tests = ["matplotlib (>=3.6.1)", "mypy (>=1.15)", "numpydoc (>=1.2.0)", "pandas (>=1.5.0)", "polars (>=0.20.30)", "pooch (>=1.8.0)", "pyamg (>=5.0.0)", "pyarrow (>=12.0.0)", "pytest (>=7.1.2)", "pytest-cov (>=2.9.0)", "ruff (>=0.11.7)"]
 
 [[package]]
-name = "scikit-misc"
-version = "0.2.0"
-description = "Miscellaneous tools for scientific computing."
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "scikit_misc-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b0cb9707c40f0fb51db45750cb90d5d9fc84d70eb6b87a299cc1c8791a09c072"},
-    {file = "scikit_misc-0.2.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:2fd3b3f3a8677111b8fff3007eb3feb4f4f6d5e7f5e91e80ad06928b03b55a8e"},
-    {file = "scikit_misc-0.2.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:682710b5e2a48c40e5ef7a94f57571a7a34fff744339473e0abc40d1b5d7a07a"},
-    {file = "scikit_misc-0.2.0-cp310-cp310-win_amd64.whl", hash = "sha256:9013b6dd7039288b89acdcf34f169cfd7de3fb18e398e3b04f461aab108bcc32"},
-    {file = "scikit_misc-0.2.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:023624b9c7db2655bd352add228b0d1a9d1b249cc8e4be6c97d6120a1c998bf6"},
-    {file = "scikit_misc-0.2.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:77fec1644dc024496cb57b92df4fd48807a246343b0e3bbacd2cc2a019bd272a"},
-    {file = "scikit_misc-0.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0632a61d63c7636d1a2b82b5aeb0b6dbd135be112b42030a82e201b9419849e1"},
-    {file = "scikit_misc-0.2.0-cp311-cp311-win_amd64.whl", hash = "sha256:16aa63c78898c2ee771136aa9aa13d36e7f766f3089551709136654b48dd36f1"},
-    {file = "scikit_misc-0.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6e80977662c679e01abf4aa36b3d7808c48162a532e10791ce88e61dcdaa0bed"},
-    {file = "scikit_misc-0.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fea8b86e7c17478d16b227e450ed9db337d9f05a3e7d38af2ea2daa1fa5dbd99"},
-    {file = "scikit_misc-0.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:603fd4bd2e165128760f62459dd297bc98c7f1a9bceccd8188aa0563cde64e60"},
-    {file = "scikit_misc-0.2.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:5c71ee5711848a2d6a6a6a1e27a99b1e2af065427635e990f47504e20cd84b32"},
-    {file = "scikit_misc-0.2.0-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:6b25482460c43cb614e852afd84a42cc3e0e9bf346d1e18570038ca5c20889d7"},
-    {file = "scikit_misc-0.2.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ba264c1e9aa86e29cf3e77de18d3c08223105d1165e848c69e5586a8da29158c"},
-    {file = "scikit_misc-0.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:e4342582fb57987efc49f3fdf329c4f4edd08d9938e76dc4916b3df55ba4aa4c"},
-    {file = "scikit_misc-0.2.0.tar.gz", hash = "sha256:ac14dd4e935e442fc34ab1c583b6611d4603d06f48828a85c7e03e2c2c582bbc"},
-]
-
-[package.dependencies]
-numpy = ">=1.22.3"
-
-[package.extras]
-dev = ["twine", "wheel"]
-doc = ["numydoc", "sphinx"]
-test = ["pytest-cov"]
-
-[[package]]
 name = "scipy"
 version = "1.13.1"
 description = "Fundamental algorithms for scientific computing in Python"
@@ -2216,4 +2182,4 @@ test = ["big-O", "importlib-resources ; python_version < \"3.9\"", "jaraco.funct
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9"
-content-hash = "c6eca8b88b1952f87d88459132164dc004fae01e1c51bdf3224e55b824c6f735"
+content-hash = "f05176edde63db59c26996d1d4ec78b81516ab382ee11d7301189861e5c64f85"
