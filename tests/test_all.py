@@ -24,18 +24,27 @@ selected_fates = [
 ]
 
 
-def config(shared_datadir="tests/data"):
-    cs.settings.data_path = os.path.join(shared_datadir, "..", "output")
-    cs.settings.figure_path = os.path.join(shared_datadir, "..", "output")
-    cs.settings.verbosity = 0  # range: 0 (error),1 (warning),2 (info),3 (hint).
+def config(shared_datadir=None):
+    if shared_datadir is None:
+        shared_datadir = os.path.join(os.path.dirname(__file__), "data")
+
+    Path(shared_datadir).mkdir(parents=True, exist_ok=True)
+    if not os.path.exists(os.path.join(shared_datadir, "cell_id.txt")):
+        # Extract files directly into the shared_datadir
+        cs.datasets.raw_data_for_import_exercise(extract_path=shared_datadir)
+
+    cs.settings.data_path = os.path.join(os.path.dirname(shared_datadir), "output")
+    cs.settings.figure_path = os.path.join(os.path.dirname(shared_datadir), "output")
+    cs.settings.verbosity = 0
     cs.settings.set_figure_params(
         format="png", figsize=[4, 3.5], dpi=25, fontsize=14, pointsize=3, dpi_save=25
     )
     cs.hf.set_up_folders()  # setup the data_path and figure_path
+    return shared_datadir
 
 
-def test_load_dataset(shared_datadir="tests/data"):
-    config(shared_datadir)
+def test_load_dataset(shared_datadir=None):
+    shared_datadir = config(shared_datadir)
     print("-------------------------load dataset")
     # cs.datasets.hematopoiesis_subsampled()
     # cs.datasets.hematopoiesis()
@@ -50,12 +59,12 @@ def test_load_dataset(shared_datadir="tests/data"):
     # cs.datasets.reprogramming_Day0_3_28()
 
 
-def test_load_data_from_scratch(shared_datadir="tests/data"):
+def test_load_data_from_scratch(shared_datadir=None):
     import numpy as np
     import pandas as pd
     import scipy.io as sio
 
-    config(shared_datadir)
+    shared_datadir = config(shared_datadir)
     df_cell_id = pd.read_csv(os.path.join(shared_datadir, "cell_id.txt"))
     file_name = os.path.join(shared_datadir, "test_adata_preprocessed.h5ad")
     adata_orig = cs.hf.read(file_name)
@@ -71,8 +80,8 @@ def test_load_data_from_scratch(shared_datadir="tests/data"):
     # cs.pl.embedding(adata_orig, color="state_info")
 
 
-def test_preprocessing(shared_datadir="tests/data"):
-    config(shared_datadir)
+def test_preprocessing(shared_datadir=None):
+    shared_datadir = config(shared_datadir)
     file_name = os.path.join(shared_datadir, "test_adata_preprocessed.h5ad")
     adata_orig_0 = cs.hf.read(file_name)
     print("------------------------Test preprocessing")
@@ -129,8 +138,8 @@ def test_preprocessing(shared_datadir="tests/data"):
     plt.close("all")
 
 
-def test_clonal_analysis(shared_datadir="tests/data"):
-    config(shared_datadir)
+def test_clonal_analysis(shared_datadir=None):
+    shared_datadir = config(shared_datadir)
 
     file_name = os.path.join(shared_datadir, "test_adata_preprocessed.h5ad")
     adata = cs.hf.read(file_name)
@@ -161,8 +170,8 @@ def test_clonal_analysis(shared_datadir="tests/data"):
     plt.close("all")
 
 
-def test_Tmap_inference(shared_datadir="tests/data"):
-    config(shared_datadir)
+def test_Tmap_inference(shared_datadir=None):
+    shared_datadir = config(shared_datadir)
     file_name = os.path.join(shared_datadir, "test_adata_preprocessed.h5ad")
     adata_orig = cs.hf.read(file_name)
     print("------------------------------T map inference")
@@ -203,8 +212,8 @@ def test_Tmap_inference(shared_datadir="tests/data"):
     # cs.hf.save_map(adata_3)
 
 
-def test_Tmap_analysis(shared_datadir="tests/data"):
-    config(shared_datadir)
+def test_Tmap_analysis(shared_datadir=None):
+    shared_datadir = config(shared_datadir)
 
     load_pre_compute_map = False
     if load_pre_compute_map:
@@ -430,11 +439,12 @@ def test_clean_up():
         os.system("rm -r output")
 
 
-os.chdir(os.path.dirname(__file__))
-cs.settings.verbosity = 3  # range: 0 (error),1 (warning),2 (info),3 (hint).
-# test_load_dataset("data")
-test_preprocessing("data")
-test_load_data_from_scratch("data")
-test_clonal_analysis("data")
-test_Tmap_inference("data")
-test_Tmap_analysis("data")
+if __name__ == "__main__":
+    os.chdir(os.path.dirname(__file__))
+    cs.settings.verbosity = 3
+    test_load_dataset("data")
+    test_preprocessing("data")
+    test_load_data_from_scratch("data")
+    test_clonal_analysis("data")
+    test_Tmap_inference("data")
+    test_Tmap_analysis("data")

@@ -26,7 +26,7 @@ def synthetic_bifurcation(data_des="bifur"):
     return load_data_core(data_name, data_des)
 
 
-def raw_data_for_import_exercise():
+def raw_data_for_import_exercise(extract_path="."):
     """
     The test dataset for demonstrating how to import your own data
 
@@ -40,7 +40,7 @@ def raw_data_for_import_exercise():
     import zipfile
 
     with zipfile.ZipFile("test_data.zip", "r") as zip_ref:
-        zip_ref.extractall()
+        zip_ref.extractall(extract_path)
 
 
 # def synthetic_bifurcation_dynamic_BC(data_des='bifur_conBC'):
