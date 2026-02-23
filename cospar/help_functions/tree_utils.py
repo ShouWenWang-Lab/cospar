@@ -4,7 +4,7 @@ class Tree:
     Parses basic Newick format strings and provides standard node traversal methods.
     """
 
-    def __init__(self, newick=None, name="", dist=0.0):
+    def __init__(self, newick=None, name="", dist=0.0, format=None):
         self.up = None
         self.children = []
         self.name = name
