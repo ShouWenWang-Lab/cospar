@@ -84,10 +84,10 @@ def get_dge_SW(ad, mask1, mask2, min_frac_expr=0.05, pseudocount=1):
 def sparse_var(E, axis=0):
     """calculate variance across the specified axis of a sparse matrix"""
 
-    mean_gene = E.mean(axis=axis).toarray().squeeze()
+    mean_gene = np.asarray(E.mean(axis=axis)).squeeze()
     tmp = E.copy()
     tmp.data **= 2
-    return tmp.mean(axis=axis).toarray().squeeze() - mean_gene**2
+    return np.asarray(tmp.mean(axis=axis)).squeeze() - mean_gene**2
 
 
 def mean_center(E, column_means=None):
@@ -367,13 +367,13 @@ def get_vscores(E, min_mean=0, nBins=50, fit_percentile=0.1, error_wt=1):
 
     ncell = E.shape[0]
 
-    mu_gene = E.mean(axis=0).toarray().squeeze()
+    mu_gene = np.asarray(E.mean(axis=0)).squeeze()
     gene_ix = np.nonzero(mu_gene > min_mean)[0]
     mu_gene = mu_gene[gene_ix]
 
     tmp = E[:, gene_ix]
     tmp.data **= 2
-    var_gene = tmp.mean(axis=0).toarray().squeeze() - mu_gene**2
+    var_gene = np.asarray(tmp.mean(axis=0)).squeeze() - mu_gene**2
     del tmp
     FF_gene = var_gene / mu_gene
 

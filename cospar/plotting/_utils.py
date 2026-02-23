@@ -47,7 +47,12 @@ def embedding_genes(adata, basis="X_emb", color=None, color_bar=True, **kwargs):
     if basis not in adata.obsm.keys():
         raise ValueError(f"basis={basis} is not among {adata.obsm.keys()}")
     if color in adata.var_names:
-        vector = adata[:, color].X.A.flatten()
+        X_col = adata[:, color].X
+        vector = (
+            X_col.toarray().flatten()
+            if hasattr(X_col, "toarray")
+            else np.asarray(X_col).flatten()
+        )
 
     elif color in adata.obs.keys():
         vector = np.array(adata.obs[color])
@@ -450,7 +455,7 @@ def heatmap(
 
     if color_bar:
         norm = mpl_Normalize(vmin=vmin, vmax=vmax)
-        cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color_map))
+        cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color_map), ax=ax)
         cbar.set_label(f"{color_bar_label}{label_}", rotation=270, labelpad=20)
     if ax_ is None:
         plt.gcf().set_size_inches((fig_width, fig_height))

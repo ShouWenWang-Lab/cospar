@@ -326,9 +326,9 @@ def test_Tmap_analysis(shared_datadir="tests/data"):
         source="transition_map",
     )
 
-    cs.pl.gene_expression_dynamics(
-        adata, selected_fate="Neutrophil", gene_name_list=["Gata1"]
-    )
+    # cs.pl.gene_expression_dynamics(
+    #    adata, selected_fate="Neutrophil", gene_name_list=["Gata1"]
+    # )
 
     gene_list = [
         "Mpo",

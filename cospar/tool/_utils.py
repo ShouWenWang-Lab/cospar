@@ -358,7 +358,7 @@ def compute_state_potential(
         transition_map = ssp.csr_matrix(transition_map).copy()
     resol = 10 ** (-10)
     transition_map = hf.sparse_rowwise_multiply(
-        transition_map, 1 / (resol + np.toarray().sum(transition_map, 1).flatten())
+        transition_map, 1 / (resol + transition_map.toarray().sum(1).flatten())
     )
     fate_N = len(fate_array)
     N1, N2 = transition_map.shape
@@ -384,7 +384,7 @@ def compute_state_potential(
                 )
             else:  # just perform summation
                 fate_map[:, k] = (
-                    np.toarray().sum(transition_map[:, idx_array[:, k]], 1).flatten()
+                    transition_map[:, idx_array[:, k]].toarray().sum(1).flatten()
                 )
 
         # rescale. After this, the fate map value spreads between [0,1]. Otherwise, they can be tiny.
@@ -430,7 +430,7 @@ def compute_state_potential(
                 )
             else:
                 fate_map[:, k] = (
-                    np.toarray().sum(transition_map[idx_array[:, k], :], 0).flatten()
+                    transition_map[idx_array[:, k], :].toarray().sum(0).flatten()
                 )
 
         # rescale. After this, the fate map value spreads between [0,1]. Otherwise, they can be tiny.

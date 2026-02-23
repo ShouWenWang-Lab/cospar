@@ -483,7 +483,12 @@ def gene_expression_on_manifold(
         sp_idx = np.ones(adata.shape[0], dtype=bool)
 
     for j, g in enumerate(selected_genes):
-        vector = adata[:, g].X.A.flatten()
+        X_col = adata[:, g].X
+        vector = (
+            X_col.toarray().flatten()
+            if hasattr(X_col, "toarray")
+            else np.asarray(X_col).flatten()
+        )
         fig = plt.figure(figsize=(fig_width, fig_height))
         ax = plt.subplot(1, 1, 1)
         pl_util.customized_embedding(

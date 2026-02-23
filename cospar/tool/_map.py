@@ -949,7 +949,7 @@ def iterative_differentiation(
         used_map = adata.uns[source]
         resol = 10 ** (-10)
         used_map = hf.sparse_rowwise_multiply(
-            used_map, 1 / (resol + np.toarray().sum(used_map, 1).flatten())
+            used_map, 1 / (resol + used_map.toarray().sum(1).flatten())
         )
 
         if not map_backward:
