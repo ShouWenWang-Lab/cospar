@@ -805,7 +805,7 @@ def single_cell_transition(
             logg.error(f"Valid id is a integer, ranged in (0,{len(cell_id_t1)-1}).")
         else:
             if ssp.issparse(Tmap):
-                Tmap = Tmap.A
+                Tmap = Tmap.toarray()
 
             row = len(selected_state_id_list)
             col = 1

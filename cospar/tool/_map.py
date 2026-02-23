@@ -366,7 +366,7 @@ def pvalue_for_fate_coupling(
 
     # only select cells with clonal barcodes and within targeted clusters, so that
     # the permutation does not affect the clone size and the number of clonal cells in each cell type
-    adata = adata_orig[(adata_orig.obsm["X_clone"].A.sum(1) > 0) & all_sel_idx]
+    adata = adata_orig[(adata_orig.obsm["X_clone"].toarray().sum(1) > 0) & all_sel_idx]
     adata.obs["time_info"] = pd.Categorical(adata.obs["time_info"].astype(str))
     ordered_index = adata.obs["time_info"].sort_values(ascending=True).index
     adata = adata[ordered_index]
@@ -380,7 +380,7 @@ def pvalue_for_fate_coupling(
 
     adata_rand = adata.copy()
     adata_rand.uns["data_des"] = ["rand"]
-    X_clone = adata.obsm["X_clone"].A
+    X_clone = adata.obsm["X_clone"].toarray()
 
     # compute the actual coupling matrix
     fate_coupling(
@@ -949,7 +949,7 @@ def iterative_differentiation(
         used_map = adata.uns[source]
         resol = 10 ** (-10)
         used_map = hf.sparse_rowwise_multiply(
-            used_map, 1 / (resol + np.sum(used_map, 1).A.flatten())
+            used_map, 1 / (resol + np.toarray().sum(used_map, 1).flatten())
         )
 
         if not map_backward:

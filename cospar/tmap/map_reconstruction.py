@@ -292,10 +292,10 @@ def infer_Tmap_from_multitime_clones(
                 temp_id_t1, Tmap_cell_id_t1
             )[0]
 
-            transition_map[sp_id_t1, :] = adata_temp.uns["transition_map"].A
+            transition_map[sp_id_t1, :] = adata_temp.uns["transition_map"].toarray()
             intraclone_transition_map[sp_id_t1, :] = adata_temp.uns[
                 "intraclone_transition_map"
-            ].A
+            ].toarray()
 
             if "Smatrix" in adata_temp.uns.keys():
                 adata_temp.uns.pop("Smatrix")
@@ -583,15 +583,17 @@ def infer_Tmap_from_one_time_clones(
     if padding_X_clone:
         logg.info("Generate a unique clonal label for each clonally unlabeled cell.")
         time_index_t2_orig = time_info_orig == later_time_point
-        zero_clone_idx = clone_annot_orig[time_index_t2_orig].sum(1).A.flatten() == 0
+        zero_clone_idx = (
+            clone_annot_orig[time_index_t2_orig].toarray().sum(1).flatten() == 0
+        )
         clone_annot_t2_padding = np.diag(np.ones(np.sum(zero_clone_idx)))
         non_zero_clones_idx = (
-            clone_annot_orig[time_index_t2_orig].sum(0).A.flatten() > 0
+            clone_annot_orig[time_index_t2_orig].toarray().sum(0).flatten() > 0
         )
         M0 = np.sum(non_zero_clones_idx)
         M1 = clone_annot_t2_padding.shape[1]
         clone_annot_new = np.zeros((clone_annot_orig.shape[0], M0 + M1))
-        clone_annot_new[:, :M0] = clone_annot_orig[:, non_zero_clones_idx].A
+        clone_annot_new[:, :M0] = clone_annot_orig[:, non_zero_clones_idx].toarray()
         sp_id_t2 = np.nonzero(time_index_t2_orig)[0]
         clone_annot_new[sp_id_t2[zero_clone_idx], M0:] = clone_annot_t2_padding
     else:
@@ -599,7 +601,8 @@ def infer_Tmap_from_one_time_clones(
 
     # remove clones without a cell at t2
     valid_clone_id = np.nonzero(
-        clone_annot_new[time_info_orig == later_time_point].sum(0).A.flatten() > 0
+        clone_annot_new[time_info_orig == later_time_point].toarray().sum(0).flatten()
+        > 0
     )[0]
     X_clone_temp = clone_annot_new[:, valid_clone_id]
     adata_orig.obsm["X_clone"] = ssp.csr_matrix(X_clone_temp)
@@ -618,7 +621,7 @@ def infer_Tmap_from_one_time_clones(
     ini_transition_map = np.zeros((len(Tmap_cell_id_t1), len(Tmap_cell_id_t2)))
     X_clone_updated = adata_orig.obsm["X_clone"][
         sp_idx
-    ].A  # this does not work well if there are empty clones to begin with
+    ].toarray()  # this does not work well if there are empty clones to begin with
 
     logg.info(
         "--------Infer transition map between initial time points and the later time one-------"
@@ -654,7 +657,7 @@ def infer_Tmap_from_one_time_clones(
             temp_id_t1, Tmap_cell_id_t1
         )[0]
 
-        transition_map_temp = adata_temp.uns["transition_map"].A
+        transition_map_temp = adata_temp.uns["transition_map"].toarray()
         transition_map[sp_id_t1, :] = transition_map_temp
 
         if initialize_method == "OT":
@@ -662,11 +665,13 @@ def infer_Tmap_from_one_time_clones(
         else:
             transition_map_ini_temp = adata_temp.uns["HighVar_transition_map"]
 
-        ini_transition_map[sp_id_t1, :] = transition_map_ini_temp.A
+        ini_transition_map[sp_id_t1, :] = transition_map_ini_temp.toarray()
 
         # Update clonal prediction. This does not work well if there are empty clones to begin with
         time_info_idx = np.array(adata_temp.obs["time_info"]) == yy
-        X_clone_updated[temp_id_t1, :] = adata_temp.obsm["X_clone"][time_info_idx].A
+        X_clone_updated[temp_id_t1, :] = adata_temp.obsm["X_clone"][
+            time_info_idx
+        ].toarray()
 
     adata.uns["transition_map"] = ssp.csr_matrix(transition_map)
     adata.obsm["X_clone"] = ssp.csr_matrix(X_clone_updated)
@@ -1065,7 +1070,9 @@ def infer_Tmap_from_clonal_info_alone_private(
         idx_t2 = np.nonzero(np.isin(cell_id_t2_all, cell_id_t2_temp))[0]
         idx_t1_temp = np.nonzero(np.isin(cell_id_t1_temp, cell_id_t1_all))[0]
         idx_t2_temp = np.nonzero(np.isin(cell_id_t2_temp, cell_id_t2_all))[0]
-        T_map[idx_t1[:, np.newaxis], idx_t2] = T_map_temp[idx_t1_temp][:, idx_t2_temp].A
+        T_map[idx_t1[:, np.newaxis], idx_t2] = T_map_temp[idx_t1_temp][
+            :, idx_t2_temp
+        ].toarray()
 
     T_map = T_map.astype(int)
     adata_1.uns["clonal_transition_map"] = ssp.csr_matrix(T_map)
@@ -1216,7 +1223,9 @@ def infer_Tmap_from_clonal_info_alone(
 
             # by default, we extend the state space to all cells at the given time point.
             # so we only need to care about t1.
-            transition_map[sp_id_t1, :] = adata_temp.uns["clonal_transition_map"].A
+            transition_map[sp_id_t1, :] = adata_temp.uns[
+                "clonal_transition_map"
+            ].toarray()
 
         adata.uns["clonal_transition_map"] = ssp.csr_matrix(transition_map)
 

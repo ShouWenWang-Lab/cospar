@@ -134,7 +134,7 @@ def initialize_adata_object(
     if X_clone.shape[1] > 1:
         ini_clone_N = X_clone.shape[1]
         X_clone = ssp.csr_matrix(X_clone)
-        valid_clone_id = np.nonzero(X_clone.sum(0).A.flatten() > 0)[0]
+        valid_clone_id = np.nonzero(X_clone.toarray().sum(0).flatten() > 0)[0]
         X_clone_temp = X_clone[:, valid_clone_id]
         adata.obsm["X_clone"] = ssp.csr_matrix(X_clone_temp)
         if adata.obsm["X_clone"].shape[1] < ini_clone_N:
@@ -319,11 +319,11 @@ def remove_cell_cycle_correlated_genes(
             )
         else:
             E = adata.X
-            cycling_expression = E[:, cycling_gene_idx].A.T
+            cycling_expression = E[:, cycling_gene_idx].toarray().T
 
             highvar_genes_idx = np.array(adata.var["highly_variable"])
             highvar_genes = gene_list[highvar_genes_idx]
-            test_expression = E[:, highvar_genes_idx].A.T
+            test_expression = E[:, highvar_genes_idx].toarray().T
 
             cell_cycle_corr = hf.corr2_coeff(test_expression, cycling_expression)
 
@@ -401,7 +401,7 @@ def get_X_pca(adata, n_pca_comp=40):
     gene_list = np.array(adata.var_names)
     highvar_genes = gene_list[highvar_genes_idx]
 
-    zero_idx = adata[:, highvar_genes].X.sum(0).A.flatten() == 0
+    zero_idx = adata[:, highvar_genes].X.toarray().sum(0).flatten() == 0
     if np.sum(zero_idx) > 0:
         logg.warn(
             f"Genes {highvar_genes[zero_idx]} are not expressed. They are ignored."
@@ -763,7 +763,7 @@ def filter_clone_size(adata, lower_cutoff=2, upper_cutoff=None):
     Filter out barcodes with cells outside of the range (lower_cutoff, upper_cutoff)
     """
     X_clone_0 = adata.obsm["X_clone"]
-    clone_size = X_clone_0.sum(0).A.flatten()
+    clone_size = X_clone_0.toarray().sum(0).flatten()
     clone_idx = clone_size >= lower_cutoff
     if upper_cutoff is not None:
         clone_idx = clone_idx & (clone_size <= upper_cutoff)
@@ -775,7 +775,7 @@ def filter_cells_with_many_barcodes(adata, max_barcodes=10):
     """
     Filter out cells with more than `max_barcodes` of barcodes
     """
-    X_clone_0 = adata.obsm["X_clone"].A.copy()
+    X_clone_0 = adata.obsm["X_clone"].toarray().copy()
     barcode_N = X_clone_0.sum(1)
     cell_idx = barcode_N > max_barcodes
     X_clone_0[cell_idx] = 0
@@ -783,6 +783,6 @@ def filter_cells_with_many_barcodes(adata, max_barcodes=10):
 
 
 def filter_nonclonal_cells(adata):
-    sp_idx = adata.obsm["X_clone"].sum(1).A.flatten() > 0
+    sp_idx = adata.obsm["X_clone"].toarray().sum(1).flatten() > 0
     logg.info(f"Original cell number {len(sp_idx)}; New cell number {np.sum(sp_idx)}")
     return adata[sp_idx]

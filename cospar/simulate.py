@@ -716,7 +716,7 @@ def quantify_transition_peak_TPR_LinearDifferentiation(
     """
 
     if ssp.issparse(used_map):
-        used_map = used_map.A
+        used_map = used_map.toarray()
 
     Nt1 = len(x_t1)
     true_x = np.zeros(Nt1)

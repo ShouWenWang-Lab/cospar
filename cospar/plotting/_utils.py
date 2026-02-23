@@ -200,8 +200,14 @@ def customized_embedding(
         ax.axis("off")
 
     if set_lim == True:
-        ax.set_xlim(x.min() - x.ptp() * buffer_pct, x.max() + x.ptp() * buffer_pct)
-        ax.set_ylim(y.min() - y.ptp() * buffer_pct, y.max() + y.ptp() * buffer_pct)
+        ax.set_xlim(
+            x.min() - (x.max() - x.min()) * buffer_pct,
+            x.max() + (x.max() - x.min()) * buffer_pct,
+        )
+        ax.set_ylim(
+            y.min() - (y.max() - y.min()) * buffer_pct,
+            y.max() + (y.max() - y.min()) * buffer_pct,
+        )
 
     if title is not None:
         ax.set_title(title)

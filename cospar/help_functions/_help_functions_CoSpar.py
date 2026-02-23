@@ -45,8 +45,8 @@ def get_dge_SW(ad, mask1, mask2, min_frac_expr=0.05, pseudocount=1):
     import statsmodels.sandbox.stats.multicomp
 
     gene_mask = (
-        (ad.X[mask1, :] > 0).sum(0).A.squeeze() / mask1.sum() > min_frac_expr
-    ) | ((ad.X[mask2, :] > 0).sum(0).A.squeeze() / mask2.sum() > min_frac_expr)
+        (ad.X[mask1, :] > 0).toarray().sum(0).squeeze() / mask1.sum() > min_frac_expr
+    ) | ((ad.X[mask2, :] > 0).toarray().sum(0).squeeze() / mask2.sum() > min_frac_expr)
     # print(gene_mask.sum())
     E1 = ad.X[mask1, :][:, gene_mask].toarray()
     E2 = ad.X[mask2, :][:, gene_mask].toarray()
@@ -84,10 +84,10 @@ def get_dge_SW(ad, mask1, mask2, min_frac_expr=0.05, pseudocount=1):
 def sparse_var(E, axis=0):
     """calculate variance across the specified axis of a sparse matrix"""
 
-    mean_gene = E.mean(axis=axis).A.squeeze()
+    mean_gene = E.mean(axis=axis).toarray().squeeze()
     tmp = E.copy()
     tmp.data **= 2
-    return tmp.mean(axis=axis).A.squeeze() - mean_gene**2
+    return tmp.mean(axis=axis).toarray().squeeze() - mean_gene**2
 
 
 def mean_center(E, column_means=None):
@@ -215,7 +215,7 @@ def matrix_row_or_column_thresholding(input_matrix, threshold=0.1, row_threshold
     # print("V1")
     # t1=time.time()
     if ssp.issparse(input_matrix):
-        input_matrix = input_matrix.A
+        input_matrix = input_matrix.toarray()
         # print("Turn the sparse matrix into numpy array")
         # print(f"Time-1: {time.time()-t1}")
 
@@ -253,7 +253,7 @@ def matrix_row_or_column_thresholding_v0(
     """
     print("V0")
     if ssp.issparse(input_matrix):
-        input_matrix = input_matrix.A
+        input_matrix = input_matrix.toarray()
 
     output_matrix = input_matrix.copy()
     max_vector = np.max(input_matrix, int(row_threshold))
@@ -367,13 +367,13 @@ def get_vscores(E, min_mean=0, nBins=50, fit_percentile=0.1, error_wt=1):
 
     ncell = E.shape[0]
 
-    mu_gene = E.mean(axis=0).A.squeeze()
+    mu_gene = E.mean(axis=0).toarray().squeeze()
     gene_ix = np.nonzero(mu_gene > min_mean)[0]
     mu_gene = mu_gene[gene_ix]
 
     tmp = E[:, gene_ix]
     tmp.data **= 2
-    var_gene = tmp.mean(axis=0).A.squeeze() - mu_gene**2
+    var_gene = tmp.mean(axis=0).toarray().squeeze() - mu_gene**2
     del tmp
     FF_gene = var_gene / mu_gene
 
@@ -448,7 +448,7 @@ def filter_genes(
     mu_gene = mu_gene[ix2]
     FF_gene = FF_gene[ix2]
     min_vscore = np.percentile(Vscores, min_vscore_pctl)
-    ix = ((E[:, gene_ix] >= min_counts).sum(0).A.squeeze() >= min_cells) & (
+    ix = ((E[:, gene_ix] >= min_counts).toarray().sum(0).squeeze() >= min_cells) & (
         Vscores >= min_vscore
     )
 
@@ -517,7 +517,7 @@ def remove_corr_genes(
     exclude_ix = []
     for iSet in range(len(seed_ix_list)):
         seed_ix = seed_ix_list[iSet][
-            E[:, seed_ix_list[iSet]].sum(axis=0).A.squeeze() > 0
+            E[:, seed_ix_list[iSet]].toarray().sum(axis=0).squeeze() > 0
         ]
         if type(seed_ix) is int:
             seed_ix = np.array([seed_ix], dtype=int)
@@ -525,11 +525,13 @@ def remove_corr_genes(
             seed_ix = seed_ix[0]
         indat = E[:, seed_ix]
         tmp = sparse_zscore(indat)
-        tmp = tmp.sum(1).A.squeeze()
+        tmp = tmp.toarray().sum(1).squeeze()
 
         c = np.zeros(len(test_gene_idx))
         for iG in range(len(c)):
-            c[iG], _ = scipy.stats.pearsonr(tmp, E[:, test_gene_idx[iG]].A.squeeze())
+            c[iG], _ = scipy.stats.pearsonr(
+                tmp, E[:, test_gene_idx[iG]].toarray().squeeze()
+            )
 
         exclude_ix.extend(
             [test_gene_idx[i] for i in range(len(test_gene_idx)) if (c[i]) >= min_corr]
@@ -804,13 +806,15 @@ def add_neighboring_cells_to_a_map(initial_idx, adata, neighbor_N=5):
     #     if (np.sum(initial_idx)<size_thresh) & (np.sum(initial_idx)>0):
     #         #n0=np.round(size_thresh/np.sum(initial_idx))
     #         #sc.pp.neighbors(adata, n_neighbors=int(n0)) #,method='gauss')
-    #         output_idx=adata.uns['neighbors']['connectivities'][initial_idx].sum(0).A.flatten()>0
+    #         output_idx=adata.uns['neighbors']['connectivities'][initial_idx].toarray().sum(0).flatten()>0
     #         initial_idx=initial_idx | output_idx
 
     from scanpy.neighbors import neighbors
 
     neighbors(adata, n_neighbors=neighbor_N)  # ,method='gauss')
-    output_idx = adata.obsp["connectivities"][initial_idx].sum(0).A.flatten() > 0
+    output_idx = (
+        adata.obsp["connectivities"][initial_idx].toarray().sum(0).flatten() > 0
+    )
     post_idx = initial_idx | output_idx
     # print(f"Final: {np.sum(post_idx)}")
 
@@ -1225,7 +1229,7 @@ def check_available_clonal_info(adata):
 
     # record time points with clonal information
     if ssp.issparse(X_clone):
-        clone_N_per_cell = X_clone.sum(1).A.flatten()
+        clone_N_per_cell = X_clone.toarray().sum(1).flatten()
     else:
         clone_N_per_cell = X_clone.sum(1)
 
@@ -1435,7 +1439,7 @@ def get_X_clone_with_reference_ordering(
     )
     X_clone = ssp.csr_matrix(X_clone)
 
-    sp_idx = X_clone.sum(0).A.flatten() > 0
+    sp_idx = X_clone.toarray().sum(0).flatten() > 0
     return X_clone[:, sp_idx], reference_clone_id[sp_idx], reference_cell_id
 
 

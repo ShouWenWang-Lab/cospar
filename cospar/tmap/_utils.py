@@ -88,7 +88,7 @@ def generate_similarity_matrix(
         ##############
 
         adjacency_matrix = hf.sparse_rowwise_multiply(
-            adjacency_matrix, 1 / adjacency_matrix.sum(1).A.squeeze()
+            adjacency_matrix, 1 / adjacency_matrix.toarray().sum(1).squeeze()
         )
         nrow = adata.shape[0]
         similarity_matrix = ssp.lil_matrix((nrow, nrow))
@@ -183,7 +183,7 @@ def generate_initial_similarity(similarity_matrix, initial_index_0, initial_inde
     initial_similarity = similarity_matrix[initial_index_0][:, initial_index_1]
     # initial_similarity=hf.sparse_column_multiply(initial_similarity,1/(resol+initial_similarity.sum(0)))
     if ssp.issparse(initial_similarity):
-        initial_similarity = initial_similarity.A
+        initial_similarity = initial_similarity.toarray()
 
     logg.hint("Time elapsed: ", time.time() - t)
     return initial_similarity
@@ -213,7 +213,7 @@ def generate_final_similarity(similarity_matrix, final_index_0, final_index_1):
     t = time.time()
     final_similarity = similarity_matrix.T[final_index_0][:, final_index_1]
     if ssp.issparse(final_similarity):
-        final_similarity = final_similarity.A
+        final_similarity = final_similarity.toarray()
     # final_similarity=hf.sparse_rowwise_multiply(final_similarity,1/(resol+final_similarity.sum(1)))
 
     logg.hint("Time elapsed: ", time.time() - t)
@@ -307,10 +307,10 @@ def select_time_points(
             [sub_item for item in Clonal_cell_ID_BACK_t for sub_item in item]
         )
         valid_clone_N_FOR = np.sum(
-            clone_annot_orig[flatten_clonal_cell_ID_FOR].A.sum(0) > 0
+            clone_annot_orig[flatten_clonal_cell_ID_FOR].toarray().sum(0) > 0
         )
         valid_clone_N_BACK = np.sum(
-            clone_annot_orig[flatten_clonal_cell_ID_BACK].A.sum(0) > 0
+            clone_annot_orig[flatten_clonal_cell_ID_BACK].toarray().sum(0) > 0
         )
 
         logg.info(f"Number of multi-time clones post selection: {valid_clone_N_FOR}")
@@ -379,7 +379,9 @@ def select_time_points(
         sp_idx_0 = np.zeros(clone_annot_orig.shape[0], dtype=bool)
         sp_idx_0[sp_id_0] = True
 
-        barcode_id = np.nonzero(clone_annot_orig[sp_idx_0].A.sum(0).flatten() > 0)[0]
+        barcode_id = np.nonzero(
+            clone_annot_orig[sp_idx_0].toarray().sum(0).flatten() > 0
+        )[0]
         # sp_id=np.nonzero(sp_idx)[0]
         clone_annot = clone_annot_orig[sp_idx][:, barcode_id]
 

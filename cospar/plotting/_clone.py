@@ -287,7 +287,7 @@ def clones_on_manifold(
             )
             for j, xx in enumerate(selected_annotation_info):
                 idx_t = time_info == selected_annotation_info[j]
-                idx_clone = X_clone[:, my_id].A.flatten() > 0
+                idx_clone = X_clone[:, my_id].toarray().flatten() > 0
                 idx = idx_t & idx_clone
                 ax.plot(
                     x_emb[idx],
@@ -409,8 +409,8 @@ def clonal_reports(adata, selected_times=None, **kwargs):
         print(f"---------t={x}---------")
         adata_sp = adata_1[adata_1.obs["time_info"] == x]
         X_clone = adata_sp.obsm["X_clone"]
-        clone_size = X_clone.sum(0).A.flatten()
-        clonal_bc_number = X_clone.sum(1).A.flatten()
+        clone_size = X_clone.toarray().sum(0).flatten()
+        clonal_bc_number = X_clone.toarray().sum(1).flatten()
         clonal_cells_N = np.sum(clonal_bc_number > 0)
         total_N = X_clone.shape[0]
         total_clone_N = X_clone.shape[1]

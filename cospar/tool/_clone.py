@@ -81,7 +81,7 @@ def clonal_fate_bias(
 
         for m in tqdm(range(clone_N)):
             clone_cell_idx = (
-                X_clone[:, m].sum(1).A > 0
+                X_clone[:, m].toarray().sum(1) > 0
             ).flatten()  # cell index of clone m
             clone_size = np.sum(clone_cell_idx)  # size of this clone
 
@@ -113,7 +113,7 @@ def clonal_fate_bias(
 
                 P_value[m] = pvalue
 
-        clone_size_array = X_clone.sum(0).A.flatten()
+        clone_size_array = X_clone.toarray().sum(0).flatten()
         result = pd.DataFrame(
             {
                 "clone_id": np.arange(len(clone_size_array)),
@@ -157,7 +157,7 @@ def identify_persistent_clones(adata):
     persistent_clone_idx = np.ones(X_clone.shape[1]).astype(bool)
     for t in unique_time_info:
         persistent_clone_idx = persistent_clone_idx & (
-            X_clone[time_info == t].sum(0).A.flatten() > 0
+            X_clone[time_info == t].toarray().sum(0).flatten() > 0
         )
     persistent_clone_ids = np.nonzero(persistent_clone_idx)[0]
     return persistent_clone_ids
@@ -219,7 +219,7 @@ def get_coarse_grained_X_clone_for_clone_assignment(adata, cluster_key="leiden")
         temp = np.sum(np.array(adata.obs[cluster_key]) == x)
         cell_type_N.append(temp)
 
-    df_data = pd.DataFrame(adata.obsm["X_clone"].A)
+    df_data = pd.DataFrame(adata.obsm["X_clone"].toarray())
     df_data["cluster"] = list(adata.obs[cluster_key])
     df_X_cluster_0 = df_data.groupby("cluster").sum()
 
@@ -514,7 +514,7 @@ def clonal_trajectory(
         **kwargs,
     )
     coarse_X_clone = df_X_cluster.to_numpy()
-    X_clone = adata.obsm["X_clone"].A
+    X_clone = adata.obsm["X_clone"].toarray()
     fate_map = np.zeros((adata.shape[0], coarse_X_clone.shape[0]))
     cell_id_list = []
     fate_list = []
@@ -535,7 +535,7 @@ def clonal_trajectory(
 
 def add_clone_id_for_each_cell(adata):
     clone_id = list(np.zeros(adata.shape[0], dtype=str))
-    X_clone_old = adata.obsm["X_clone"].A
+    X_clone_old = adata.obsm["X_clone"].toarray()
     for j in range(adata.shape[0]):
         clone_id[j] = ",".join(np.nonzero(X_clone_old[j, :])[0].astype(str))
     adata.obs["clone_id"] = clone_id
@@ -552,25 +552,27 @@ def filter_cells(
     """
     cells with clone number >= clone_threshold will be removed (set to 0) from the X_clone.
     """
-    barcode_N_per_cell = adata.obsm["X_clone"].sum(1).A.flatten()
+    barcode_N_per_cell = adata.obsm["X_clone"].toarray().sum(1).flatten()
     logg.info("Multiclone cell fraction:", (barcode_N_per_cell > 1).mean())
     logg.info(
         "Fraction of clones related to a multiclone cell:",
         (adata.obsm["X_clone"][barcode_N_per_cell > 1].sum(0) > 0).mean(),
     )
-    X_clone_new = adata.obsm["X_clone"].A
+    X_clone_new = adata.obsm["X_clone"].toarray()
     for x in np.nonzero(barcode_N_per_cell >= clone_threshold)[0]:
         for j in range(X_clone_new.shape[1]):
             X_clone_new[x, j] = 0
 
-    absent_clone_before = np.nonzero(adata.obsm["X_clone"].A.sum(0) == 0)[0]
+    absent_clone_before = np.nonzero(adata.obsm["X_clone"].toarray().sum(0) == 0)[0]
     lost_clones = np.nonzero(X_clone_new.sum(0) == 0)[0]
     removed_clones = set(lost_clones).difference(absent_clone_before)
     removed_clones = list(removed_clones)
 
     if keep_discarded_clones:
         logg.info("Add back dispeared clones due to cell removal")
-        X_clone_new[:, removed_clones] = adata.obsm["X_clone"].A[:, removed_clones]
+        X_clone_new[:, removed_clones] = adata.obsm["X_clone"].toarray()[
+            :, removed_clones
+        ]
 
     adata.obsm["X_clone_old"] = adata.obsm["X_clone"]
     if update_X_clone:
@@ -603,7 +605,7 @@ def filter_clones(adata, clone_size_threshold=2, filter_larger_clones=False):
     else:
         filter smaller clones
     """
-    clone_size = adata.obsm["X_clone"].sum(0).A.flatten()
+    clone_size = adata.obsm["X_clone"].toarray().sum(0).flatten()
     if filter_larger_clones:
         clone_idx = clone_size < clone_size_threshold
         logg.info(
@@ -636,7 +638,7 @@ def clone_statistics(adata, joint_variable="time_info", display_clone_stat=True)
     adata.obs[joint_variable] = adata.obs[joint_variable].astype(str)
 
     df = (
-        pd.DataFrame(adata.obsm["X_clone"].A)
+        pd.DataFrame(adata.obsm["X_clone"].toarray())
         .reset_index()
         .rename(columns={"index": "cell_id"})
         .assign(time_info=list(adata.obs[joint_variable]))
@@ -768,7 +770,7 @@ def compute_sister_cell_distance(
         else:
             raise ValueError("method should be among {'2D' or 'high'}")
 
-    X_clone = (adata_t1.obsm["X_clone"].A.copy() > 0).astype(int)
+    X_clone = (adata_t1.obsm["X_clone"].toarray().copy() > 0).astype(int)
     logg.info(np.sum(X_clone.sum(0) >= 2), " clones with >=2 cells selected")
 
     # observed distances

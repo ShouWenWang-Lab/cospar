@@ -279,10 +279,10 @@ def mapout_trajectories(
     ########## We assume that the transition_map has been properly normalized.
     # if not ssp.issparse(transition_map): transition_map=ssp.csr_matrix(transition_map).copy()
     # resol=10**(-10)
-    # transition_map=sparse_rowwise_multiply(transition_map,1/(resol+np.sum(transition_map,1).A.flatten()))
+    # transition_map=sparse_rowwise_multiply(transition_map,1/(resol+np.toarray().sum(transition_map,1).flatten()))
 
     if ssp.issparse(transition_map):
-        transition_map = transition_map.A
+        transition_map = transition_map.toarray()
 
     N1, N2 = transition_map.shape
     if (
@@ -358,7 +358,7 @@ def compute_state_potential(
         transition_map = ssp.csr_matrix(transition_map).copy()
     resol = 10 ** (-10)
     transition_map = hf.sparse_rowwise_multiply(
-        transition_map, 1 / (resol + np.sum(transition_map, 1).A.flatten())
+        transition_map, 1 / (resol + np.toarray().sum(transition_map, 1).flatten())
     )
     fate_N = len(fate_array)
     N1, N2 = transition_map.shape
@@ -375,17 +375,17 @@ def compute_state_potential(
 
         for k in range(fate_N):
             if method == "max":
-                fate_map[:, k] = np.max(
-                    transition_map[:, idx_array[:, k]], 1
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.max(transition_map[:, idx_array[:, k]], 1).toarray().flatten()
+                )
             elif method == "mean":
-                fate_map[:, k] = np.mean(
-                    transition_map[:, idx_array[:, k]], 1
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.mean(transition_map[:, idx_array[:, k]], 1).toarray().flatten()
+                )
             else:  # just perform summation
-                fate_map[:, k] = np.sum(
-                    transition_map[:, idx_array[:, k]], 1
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.toarray().sum(transition_map[:, idx_array[:, k]], 1).flatten()
+                )
 
         # rescale. After this, the fate map value spreads between [0,1]. Otherwise, they can be tiny.
         if (method != "sum") and (method != "norm-sum"):
@@ -396,7 +396,7 @@ def compute_state_potential(
                 # logg.info('conditional method: perform column normalization')
                 fate_map = hf.sparse_column_multiply(
                     fate_map, 1 / (resol + np.sum(fate_map, 0).flatten())
-                ).A
+                ).toarray()
                 fate_map = fate_map / np.max(fate_map)
 
         for j in range(N1):
@@ -421,17 +421,17 @@ def compute_state_potential(
 
         for k in range(fate_N):
             if method == "max":
-                fate_map[:, k] = np.max(
-                    transition_map[idx_array[:, k], :], 0
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.max(transition_map[idx_array[:, k], :], 0).toarray().flatten()
+                )
             elif method == "mean":
-                fate_map[:, k] = np.mean(
-                    transition_map[idx_array[:, k], :], 0
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.mean(transition_map[idx_array[:, k], :], 0).toarray().flatten()
+                )
             else:
-                fate_map[:, k] = np.sum(
-                    transition_map[idx_array[:, k], :], 0
-                ).A.flatten()
+                fate_map[:, k] = (
+                    np.toarray().sum(transition_map[idx_array[:, k], :], 0).flatten()
+                )
 
         # rescale. After this, the fate map value spreads between [0,1]. Otherwise, they can be tiny.
         if (method != "sum") and (method != "norm-sum"):
@@ -442,7 +442,7 @@ def compute_state_potential(
                 # logg.info('conditional method: perform column normalization')
                 fate_map = hf.sparse_column_multiply(
                     fate_map, 1 / (resol + np.sum(fate_map, 0).flatten())
-                ).A
+                ).toarray()
 
         for j in range(N1):
 

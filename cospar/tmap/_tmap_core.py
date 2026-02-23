@@ -99,8 +99,8 @@ def refine_Tmap_through_cospar(
 
             if clone_id % 1000 == 0:
                 logg.hint("Clone id:", clone_id)
-            idx1 = X_clone[cell_id_array_t1, clone_id].A.flatten()
-            idx2 = X_clone[cell_id_array_t2, clone_id].A.flatten()
+            idx1 = X_clone[cell_id_array_t1, clone_id].toarray().flatten()
+            idx2 = X_clone[cell_id_array_t2, clone_id].toarray().flatten()
             if idx1.sum() > 0 and idx2.sum() > 0:
                 ## update the new_coupling matrix
                 id_1 = offset_N1 + np.nonzero(idx1)[0]
@@ -137,7 +137,7 @@ def refine_Tmap_through_cospar(
         offset_N2 = offset_N2 + len(cell_id_array_t2)
 
     ## rescale
-    new_coupling_matrix = new_coupling_matrix / (new_coupling_matrix.A.max())
+    new_coupling_matrix = new_coupling_matrix / (new_coupling_matrix.toarray().max())
 
     ## convert to sparse matrix form
     new_coupling_matrix = new_coupling_matrix.tocsr()
@@ -152,7 +152,7 @@ def refine_Tmap_through_cospar(
     logg.hint("Phase II: time elapsed -- ", time.time() - t)
 
     # both return are numpy array
-    un_SM_transition_map = new_coupling_matrix.A
+    un_SM_transition_map = new_coupling_matrix.toarray()
     return smoothed_new_transition_map, un_SM_transition_map
 
 
@@ -241,13 +241,13 @@ def refine_Tmap_through_cospar_noSmooth(
 
             if clone_id % 1000 == 0:
                 logg.hint("Clone id:", clone_id)
-            idx1 = X_clone[cell_id_array_t1, clone_id].A.flatten()
-            idx2 = X_clone[cell_id_array_t2, clone_id].A.flatten()
+            idx1 = X_clone[cell_id_array_t1, clone_id].toarray().flatten()
+            idx2 = X_clone[cell_id_array_t2, clone_id].toarray().flatten()
             if idx1.sum() > 0 and idx2.sum() > 0:
                 ## update the new_coupling matrix
                 id_1 = offset_N1 + np.nonzero(idx1)[0]
                 id_2 = offset_N2 + np.nonzero(idx2)[0]
-                prob = transition_map[id_1][:, id_2].A
+                prob = transition_map[id_1][:, id_2].toarray()
 
                 ## try row normalization
                 if normalization_mode == 0:
@@ -662,7 +662,7 @@ def infer_Tmap_from_multitime_clones_private(
         clonal_cell_id_t2, Tmap_cell_id_t2
     )[0]
     demultiplexed_map = np.zeros((len(Tmap_cell_id_t1), len(Tmap_cell_id_t2)))
-    demultiplexed_map[idx_t1[:, np.newaxis], idx_t2] = demultiplexed_map_0.A
+    demultiplexed_map[idx_t1[:, np.newaxis], idx_t2] = demultiplexed_map_0.toarray()
     adata.uns["intraclone_transition_map"] = ssp.csr_matrix(demultiplexed_map)
 
 
@@ -836,7 +836,9 @@ def refine_Tmap_through_joint_optimization(
         map_temp = initialized_map
 
     # a clone must has at least 2 cells, to be updated later.
-    valid_clone_id = np.nonzero(X_clone[cell_id_array_t2].sum(0).A.flatten() > 0)[0]
+    valid_clone_id = np.nonzero(
+        X_clone[cell_id_array_t2].toarray().sum(0).flatten() > 0
+    )[0]
     X_clone_temp = X_clone[:, valid_clone_id]
     clonal_cells_t2 = np.sum(X_clone_temp[cell_id_array_t2].sum(1).flatten())
 
@@ -850,7 +852,7 @@ def refine_Tmap_through_joint_optimization(
     ##### Partition cells into non-overlapping, combinatorial BC_id.
     # ---------------------------------
     # find the combinatorial barcodes
-    clone_idx = np.nonzero(X_clone_temp.A)
+    clone_idx = np.nonzero(X_clone_temp.toarray())
     dic = [[] for j in range(X_clone_temp.shape[0])]  # a list of list
     for j in range(clone_idx[0].shape[0]):
         dic[clone_idx[0][j]].append(clone_idx[1][j])
@@ -890,7 +892,7 @@ def refine_Tmap_through_joint_optimization(
 
     # we sort clones according to their sizes. The order of cells are not affected. So, it should not affect downstream analysis
     # small clones tend to be the ones that are barcoded/mutated later, while large clones tend to be early mutations...
-    clone_size_t2_temp = X_clone_newBC[cell_id_array_t2].sum(0).A.flatten()
+    clone_size_t2_temp = X_clone_newBC[cell_id_array_t2].toarray().sum(0).flatten()
 
     if sort_clone == 1:
         logg.hint("Sort clones by size (small to large)")
@@ -933,14 +935,14 @@ def refine_Tmap_through_joint_optimization(
         # update initial state probability matrix based on the current map
         initial_prob_matrix = (
             map_temp * X_clone_sort[cell_id_array_t2]
-        ).A  # a initial probability matrix for t1 cells, shape (n_t1_cell,n_clone)
+        ).toarray()  # a initial probability matrix for t1 cells, shape (n_t1_cell,n_clone)
 
         ########## begin: update clones
         remaining_ids_t1 = list(np.arange(len(cell_id_array_t1), dtype=int))
 
         X_clone_new = np.zeros(X_clone_sort.shape, dtype=bool)
-        X_clone_new[cell_id_array_t2] = X_clone_sort[cell_id_array_t2].A.astype(
-            bool
+        X_clone_new[cell_id_array_t2] = (
+            X_clone_sort[cell_id_array_t2].toarray().astype(bool)
         )  # update the whole t2 clones at once
 
         for j in range(clone_N1):
@@ -1031,13 +1033,13 @@ def refine_Tmap_through_joint_optimization(
                 sample_id_temp_y = yy[:sample_N_y]
 
             if x0 == 0:
-                X_map_0 = map_temp[sample_id_temp_x, :][:, sample_id_temp_y].A
+                X_map_0 = map_temp[sample_id_temp_x, :][:, sample_id_temp_y].toarray()
             else:
                 X_map_0 = X_map_1.copy()
 
             X_map_1 = adata.uns["transition_map"][sample_id_temp_x, :][
                 :, sample_id_temp_y
-            ].A
+            ].toarray()
 
             verbose = logg._settings_verbosity_greater_or_equal_than(3)
             corr_X = np.diag(hf.corr2_coeff(X_map_0, X_map_1)).mean()
@@ -1228,7 +1230,7 @@ def infer_Tmap_from_HighVar(
     )  # fraction of cells as clonally related by this gene
     cutoff_t1 = int(np.ceil(len(cell_id_array_t1) * cell_fraction_per_gene))
     cutoff_t2 = int(np.ceil(len(cell_id_array_t2) * cell_fraction_per_gene))
-    gene_exp_matrix = adata[:, sel_marker_gene_list].X.A
+    gene_exp_matrix = adata[:, sel_marker_gene_list].X.toarray()
     for j in tqdm(range(gene_exp_matrix.shape[1])):
         temp_t1 = gene_exp_matrix[:, j][cell_id_array_t1]
         temp_t1[cumu_sel_idx_t1] = 0  # set selected cell id to have zero expression
