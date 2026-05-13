@@ -32,6 +32,7 @@ def barcode_heatmap(
     select_clones_with_fates: list = None,
     select_clones_without_fates: list = None,
     select_clones_mode: str = "or",
+    color_bar_label=None,
     **kwargs,
 ):
     """
@@ -80,6 +81,9 @@ def barcode_heatmap(
         Exclude clones that labels fates from this list.
     select_clones_mode: str = {'or','and'}
         Logic rule for selection.
+    color_bar_label: `str`, optional (default: None)
+        Custom color bar label for the heatmap. If None, use the default label
+        inferred from `binarize` and `normalize`.
 
     Returns:
     --------
@@ -126,10 +130,16 @@ def barcode_heatmap(
     if plot:
         if binarize:
             final_matrix = coarse_X_clone_new > 0
-            color_bar_label = "Binarized barcode count"
+            color_bar_label = (
+                "Binarized barcode count"
+                if color_bar_label is None
+                else color_bar_label
+            )
         else:
             final_matrix = coarse_X_clone_new
-            color_bar_label = "Barcode count"
+            color_bar_label = (
+                "Barcode count" if color_bar_label is None else color_bar_label
+            )
 
         if normalize:
             color_bar_label += " (normalized)"
