@@ -409,20 +409,34 @@ def heatmap(
         upper_triangle_indices = np.triu_indices(new_data.shape[0])
         new_data[upper_triangle_indices] = np.nan
 
-    ax.imshow(
+    n_rows, n_cols = new_data.shape
+
+    x_edges = np.arange(n_cols + 1)
+    y_edges = np.arange(n_rows + 1)
+    mesh = ax.pcolormesh(
+        x_edges,
+        y_edges,
         new_data,
-        aspect="auto",
         cmap=color_map,
         vmin=vmin,
         vmax=vmax,
-        interpolation="none",
+        shading="flat",
+        rasterized=True,
     )
 
+    ax.set_aspect("auto")
+    ax.set_xlim(0, n_cols)
+    ax.set_ylim(n_rows, 0)
+
+    # Match imshow default orientation: first row at the top
+    x_tick_positions = np.arange(n_cols) + 0.5
+    y_tick_positions = np.arange(n_rows) + 0.5
+
     if x_ticks is None:
-        plt.xticks([])
+        ax.set_xticks([])
     else:
-        plt.xticks(
-            x_array,
+        ax.set_xticks(x_tick_positions)
+        ax.set_xticklabels(
             np.array(x_ticks)[order_x],
             rotation=90,
             style=x_tick_style,
@@ -434,10 +448,10 @@ def heatmap(
             print(f"x_ticks: ['{x_ticks_print}']")
 
     if y_ticks is None:
-        plt.yticks([])
+        ax.set_yticks([])
     else:
-        plt.yticks(
-            y_array,
+        ax.set_yticks(y_tick_positions)
+        ax.set_yticklabels(
             np.array(y_ticks)[order_y],
             style=y_tick_style,
         )
