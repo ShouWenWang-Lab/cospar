@@ -1211,7 +1211,7 @@ def check_available_clonal_info(adata):
 
     # record time points with clonal information
     if ssp.issparse(X_clone):
-        clone_N_per_cell = X_clone.toarray().sum(1).flatten()
+        clone_N_per_cell = np.asarray(X_clone.sum(axis=1)).ravel()
     else:
         clone_N_per_cell = X_clone.sum(1)
 

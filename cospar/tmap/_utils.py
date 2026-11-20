@@ -10,6 +10,26 @@ from .. import logging as logg
 from .. import plotting as pl
 
 
+def sparse_row_blocks(shape):
+    """Yield row bounds with room for about eight million entries per block."""
+    rows, columns = shape
+    block_rows = max(1, (8 * 1024**2) // max(1, columns))
+    for start in range(0, rows, block_rows):
+        yield start, min(start + block_rows, rows)
+
+
+def prune_csr_rows(matrix, threshold):
+    """Zero CSR entries strictly below their row's relative threshold, in place."""
+    maxima = matrix.max(axis=1).toarray().ravel() * threshold
+    for start, end in sparse_row_blocks(matrix.shape):
+        indptr = matrix.indptr[start : end + 1]
+        data = matrix.data[indptr[0] : indptr[-1]]
+        cutoffs = np.repeat(maxima[start:end], np.diff(indptr))
+        data[data < cutoffs] = 0
+    matrix.eliminate_zeros()
+    return matrix
+
+
 def generate_similarity_matrix(
     adata,
     file_name,
@@ -81,69 +101,52 @@ def generate_similarity_matrix(
             logg.hint(
                 "Use existing KNN graph at adata.obsp['connectivities'] for generating the smooth matrix"
             )
-        adjacency_matrix = adata.obsp["connectivities"]
-
-        ############## The new method
-        adjacency_matrix = (adjacency_matrix + adjacency_matrix.T) / 2
-        ##############
-
-        adjacency_matrix = hf.sparse_rowwise_multiply(
-            adjacency_matrix, 1 / adjacency_matrix.toarray().sum(1).squeeze()
+        adjacency = adata.obsp["connectivities"]
+        adjacency = (adjacency + adjacency.T) / 2
+        row_sums = np.asarray(adjacency.sum(axis=1)).ravel()
+        inv_row_sums = np.divide(
+            1, row_sums, out=np.zeros_like(row_sums), where=row_sums != 0
         )
+        adjacency = hf.sparse_rowwise_multiply(adjacency, inv_row_sums)
+        transpose_A = (1 - beta) * adjacency.T.tocsr()
         nrow = adata.shape[0]
-        similarity_matrix = ssp.lil_matrix((nrow, nrow))
-        similarity_matrix.setdiag(np.ones(nrow))
-        transpose_A = adjacency_matrix.T
+        similarity_matrix = ssp.eye(nrow, format="csr")
 
         if round_of_smooth == 0:
-            SM = 0
-            similarity_matrix = ssp.csr_matrix(similarity_matrix)
-            ssp.save_npz(file_name + f"_SM{SM}.npz", similarity_matrix)
+            ssp.save_npz(file_name + "_SM0.npz", similarity_matrix)
 
-        for iRound in range(round_of_smooth):
-            SM = iRound + 1
-
+        for SM in range(1, round_of_smooth + 1):
             logg.info("Smooth round:", SM)
             t = time.time()
-            similarity_matrix = (
-                beta * similarity_matrix + (1 - beta) * transpose_A * similarity_matrix
-            )
-            # similarity_matrix =beta*similarity_matrix+(1-beta)*similarity_matrix*adjacency_matrix
-            # similarity_matrix_array.append(similarity_matrix)
+            blocks = []
+            positive_count = 0
+            prune = False
+            for start, end in sparse_row_blocks(similarity_matrix.shape):
+                block = (
+                    beta * similarity_matrix[start:end]
+                    + transpose_A[start:end] @ similarity_matrix
+                )
+                block.eliminate_zeros()
+                blocks.append(block)
+                # Each block contains complete rows, so row pruning can start as
+                # soon as the unpruned matrix is known to meet the density cutoff.
+                positive_count += np.count_nonzero(block.data > 0)
+                if prune:
+                    prune_csr_rows(block, truncation_threshold)
+                elif positive_count / (nrow * nrow) >= 0.1:
+                    prune = True
+                    for previous_block in blocks:
+                        prune_csr_rows(previous_block, truncation_threshold)
 
+            del similarity_matrix
+            similarity_matrix = ssp.vstack(blocks, format="csr")
+            del blocks
             logg.hint("Time elapsed:", time.time() - t)
-
-            t = time.time()
-            sparsity_frac = (similarity_matrix > 0).sum() / (
-                similarity_matrix.shape[0] * similarity_matrix.shape[1]
-            )
-            if sparsity_frac >= 0.1:
-                # similarity_matrix_truncate=similarity_matrix
-                # similarity_matrix_truncate_array.append(similarity_matrix_truncate)
-
-                logg.hint(f"Orignal sparsity={sparsity_frac}, Thresholding")
-                similarity_matrix = hf.matrix_row_or_column_thresholding(
-                    similarity_matrix, truncation_threshold
+            if prune:
+                logg.hint(
+                    f"Original density={positive_count / (nrow * nrow):.4f}, "
+                    f"final density={similarity_matrix.nnz / (nrow * nrow):.4f}"
                 )
-                sparsity_frac_2 = (similarity_matrix > 0).sum() / (
-                    similarity_matrix.shape[0] * similarity_matrix.shape[1]
-                )
-                # similarity_matrix_truncate_array.append(similarity_matrix_truncate)
-
-                logg.hint(f"Final sparsity={sparsity_frac_2}")
-
-                logg.info(
-                    f"similarity matrix truncated (Smooth round={SM}): ",
-                    time.time() - t,
-                )
-
-            # logg.info("Save the matrix")
-            # file_name=f'data/20200221_truncated_similarity_matrix_SM{round_of_smooth}_kNN{neighbor_N}_Truncate{str(truncation_threshold)[2:]}.npz'
-            similarity_matrix = ssp.csr_matrix(similarity_matrix)
-
-            ############## The new method
-            # similarity_matrix=similarity_matrix.T.copy()
-            ##############
 
             if save_subset:
                 if SM % 5 == 0:  # save when SM=5,10,15,20,...
@@ -156,68 +159,6 @@ def generate_similarity_matrix(
                 ssp.save_npz(file_name + f"_SM{SM}.npz", similarity_matrix)
 
     return similarity_matrix
-
-
-def generate_initial_similarity(similarity_matrix, initial_index_0, initial_index_1):
-    """
-    Extract Smatrix at t1 from the full Smatrix
-
-    Parameters
-    ----------
-    similarity_matrix: `np.array` or `sp.spmatrix`
-        full Smatrix
-    initial_index_0: `list`
-        list of selected t1-cell id among all cells (t1+t2)
-    initial_index_1: `list`
-        list of selected t1-cell id among all cells (t1+t2)
-        It can be the same as initial_index_0. In the case that they are different,
-        initial_index_1 is a subset of cells that correspond to multi-time clones,
-        while initial_index_0 may be all cells at t1.
-
-    Returns
-    -------
-    initial Smatrix: `np.array`
-    """
-
-    t = time.time()
-    initial_similarity = similarity_matrix[initial_index_0][:, initial_index_1]
-    # initial_similarity=hf.sparse_column_multiply(initial_similarity,1/(resol+initial_similarity.sum(0)))
-    if ssp.issparse(initial_similarity):
-        initial_similarity = initial_similarity.toarray()
-
-    logg.hint("Time elapsed: ", time.time() - t)
-    return initial_similarity
-
-
-def generate_final_similarity(similarity_matrix, final_index_0, final_index_1):
-    """
-    Extract Smatrix at t2 from the full Smatrix
-
-    Parameters
-    ----------
-    similarity_matrix: `np.array` or `sp.spmatrix`
-        full Smatrix
-    final_index_0: `list`
-        list of selected t2-cell id among all cells (t1+t2)
-    final_index_1: `list`
-        list of selected t2-cell id among all cells (t1+t2)
-        It can be the same as final_index_0. In the case that they are different,
-        initial_index_0 is a subset of cells that correspond to multi-time clones,
-        while initial_index_1 may be all cells at t2.
-
-    Returns
-    -------
-    initial Smatrix: `np.array`
-    """
-
-    t = time.time()
-    final_similarity = similarity_matrix.T[final_index_0][:, final_index_1]
-    if ssp.issparse(final_similarity):
-        final_similarity = final_similarity.toarray()
-    # final_similarity=hf.sparse_rowwise_multiply(final_similarity,1/(resol+final_similarity.sum(1)))
-
-    logg.hint("Time elapsed: ", time.time() - t)
-    return final_similarity
 
 
 def select_time_points(
@@ -266,7 +207,7 @@ def select_time_points(
         ### Day t - t+1
         Clonal_cell_ID_FOR_t = []
         for j in range(len(time_point) - 1):
-            idx_t = np.array((At[j] * At[j + 1].T).sum(1) > 0).flatten()
+            idx_t = At[j] @ np.asarray(At[j + 1].sum(axis=0)).ravel() > 0
             time_index_t = time_info_orig == time_point[j]
             temp = np.nonzero(time_index_t)[0][idx_t]
             Clonal_cell_ID_FOR_t.append(
@@ -281,7 +222,7 @@ def select_time_points(
         ### Day t+1 - t
         Clonal_cell_ID_BACK_t = []
         for j in range(len(time_point) - 1):
-            idx_t = np.array((At[j + 1] * At[j].T).sum(1) > 0).flatten()
+            idx_t = At[j + 1] @ np.asarray(At[j].sum(axis=0)).ravel() > 0
             time_index_t = time_info_orig == time_point[j + 1]
             temp = np.nonzero(time_index_t)[0][idx_t]
             Clonal_cell_ID_BACK_t.append(
@@ -306,15 +247,10 @@ def select_time_points(
         flatten_clonal_cell_ID_BACK = np.array(
             [sub_item for item in Clonal_cell_ID_BACK_t for sub_item in item]
         )
-        valid_clone_N_FOR = np.sum(
-            clone_annot_orig[flatten_clonal_cell_ID_FOR].toarray().sum(0) > 0
+        valid_clone_N_FOR = np.count_nonzero(
+            np.asarray(clone_annot_orig[flatten_clonal_cell_ID_FOR].sum(axis=0)) > 0
         )
-        valid_clone_N_BACK = np.sum(
-            clone_annot_orig[flatten_clonal_cell_ID_BACK].toarray().sum(0) > 0
-        )
-
         logg.info(f"Number of multi-time clones post selection: {valid_clone_N_FOR}")
-        # logg.info("Valid clone number 'BACK' post selection",valid_clone_N_BACK)
 
         ###################### select initial and later cell states
 
@@ -380,7 +316,7 @@ def select_time_points(
         sp_idx_0[sp_id_0] = True
 
         barcode_id = np.nonzero(
-            clone_annot_orig[sp_idx_0].toarray().sum(0).flatten() > 0
+            np.asarray(clone_annot_orig[sp_idx_0].sum(axis=0)).ravel() > 0
         )[0]
         # sp_id=np.nonzero(sp_idx)[0]
         clone_annot = clone_annot_orig[sp_idx][:, barcode_id]

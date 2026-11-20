@@ -14,146 +14,70 @@ from .. import settings
 from .optimal_transport import optimal_transport_duality_gap, transport_stablev2
 
 
-def refine_Tmap_through_cospar(
-    MultiTime_cell_id_array_t1,
-    MultiTime_cell_id_array_t2,
+def _build_clone_coupling(
+    cells_at_t1,
+    cells_at_t2,
     proportion,
     transition_map,
     X_clone,
-    initial_similarity,
-    final_similarity,
-    sparsity_threshold=0.1,
-    normalization_mode=1,
+    sparsity_threshold,
+    normalization_mode,
 ):
-    """
-    This performs one iteration of coherent sparsity optimization.
+    """Extract and normalize the within-clone transitions for each time pair."""
+    shape = (sum(map(len, cells_at_t1)), sum(map(len, cells_at_t2)))
+    if transition_map is not None:
+        row_cutoffs = transition_map.max(axis=1).toarray().ravel() * sparsity_threshold
 
-    This is our core algorithm for Tmap inference. It updates a map
-    by considering clones spanning multiple time points.
+    rows, columns, values = [], [], []
+    offset_t1, offset_t2 = 0, 0
+    for pair, (cells_t1, cells_t2) in enumerate(zip(cells_at_t1, cells_at_t2)):
+        clones_t1 = ssp.csc_matrix(X_clone[cells_t1])
+        clones_t2 = ssp.csc_matrix(X_clone[cells_t2])
+        shared_clones = np.flatnonzero(
+            (np.diff(clones_t1.indptr) != 0) & (np.diff(clones_t2.indptr) != 0)
+        )
+        for clone in shared_clones:
+            slice_t1 = slice(*clones_t1.indptr[clone : clone + 2])
+            slice_t2 = slice(*clones_t2.indptr[clone : clone + 2])
+            weights_t1 = clones_t1.data[slice_t1]
+            weights_t2 = clones_t2.data[slice_t2]
+            if weights_t1.sum() <= 0 or weights_t2.sum() <= 0:
+                continue
 
-    Parameters
-    ----------
-    MultiTime_cell_id_array_t1: `np.array`
-        An array of cell id sub_array, where each sub_array consists of
-        clonally-related cell id's at different time points
-    MultiTime_cell_id_array_t2: `np.array`
-        An corresponding array of sub_array, where each sub_array are id's of
-        cells that are clonally related to the corresponding sub_array at
-        MultiTime_cell_id_array_t1.
-    proportion: `list`
-        A weight factor for each time point.
-    transition_map: `np.array` or `sp.spmatrix`
-        initialized transition map, or map from a previous iteration.
-    X_clone: `sp.spmatrix`
-        clonal matrix
-    initial_similarity: `np.array`
-        similarity matrix for all cells belonging
-        to MultiTime_cell_id_array_t1
-    final_similarity: `np.array`
-        similarity matrix for all cells belonging
-        to MultiTime_cell_id_array_t2
-    sparsity_threshold: `float`, optional (default: 0.1)
-        The relative threshold to remove noises in the updated transition map,
-        in the range [0,1].
-    normalization_mode: `int`, optional (default: 1)
-        Normalization method. Choice: [0,1].
-        0, single-cell normalization; 1, Clone normalization. The clonal
-        normalization suppresses the contribution of large
-        clones, and is much more robust.
-
-    Returns
-    -------
-    smoothed_new_transition_map: `np.array`
-    un_SM_transition_map: `np.array`
-    """
-
-    resol = 10 ** (-10)
-    transition_map = hf.matrix_row_or_column_thresholding(
-        transition_map, sparsity_threshold, row_threshold=True
-    )
-
-    if normalization_mode == 0:
-        logg.hint("Single-cell normalization")
-    if normalization_mode == 1:
-        logg.hint("Clone normalization")
-
-    if ssp.issparse(X_clone):
-        X_clone = ssp.csr_matrix(X_clone)
-
-    cell_N, clone_N = X_clone.shape
-    N1, N2 = transition_map.shape
-    new_coupling_matrix = ssp.lil_matrix((N1, N2))
-
-    # cell id order in the similarity matrix is obtained by concatenating the cell id
-    # list in MultiTime_cell_id_array_t1. So, we need to offset the id if we move to the next list
-    offset_N1 = 0
-    offset_N2 = 0
-    for j in range(len(MultiTime_cell_id_array_t1)):
-
-        logg.hint("Relative time point pair index:", j)
-        cell_id_array_t1 = MultiTime_cell_id_array_t1[j]
-        cell_id_array_t2 = MultiTime_cell_id_array_t2[j]
-
-        for clone_id in range(clone_N):
-            # pdb.set_trace()
-
-            if clone_id % 1000 == 0:
-                logg.hint("Clone id:", clone_id)
-            idx1 = X_clone[cell_id_array_t1, clone_id].toarray().flatten()
-            idx2 = X_clone[cell_id_array_t2, clone_id].toarray().flatten()
-            if idx1.sum() > 0 and idx2.sum() > 0:
-                ## update the new_coupling matrix
-                id_1 = offset_N1 + np.nonzero(idx1)[0]
-                id_2 = offset_N2 + np.nonzero(idx2)[0]
-                prob = transition_map[id_1][:, id_2]
-
-                ## try row normalization
-                if normalization_mode == 0:
-                    prob = hf.sparse_rowwise_multiply(
-                        prob, 1 / (resol + np.sum(prob, 1))
-                    )  # cell-level normalization
-                else:
-                    prob = prob / (
-                        resol + np.sum(prob)
-                    )  # clone level normalization, account for proliferation
-
-                weight_factor = np.sqrt(
-                    np.mean(idx1[idx1 > 0]) * np.mean(idx2[idx2 > 0])
-                )  # the contribution of a particular clone can be tuned by its average entries
-                if weight_factor > 1:
-                    logg.hint(
-                        "X_clone has entries not 0 or 1. Using weight modulation",
-                        weight_factor,
-                    )
-
-                # Use the add mode, add up contributions from each clone
-                new_coupling_matrix[id_1[:, np.newaxis], id_2] = (
-                    new_coupling_matrix[id_1[:, np.newaxis], id_2]
-                    + proportion[j] * prob * weight_factor
+            idx_t1 = offset_t1 + clones_t1.indices[slice_t1][weights_t1 != 0]
+            idx_t2 = offset_t2 + clones_t2.indices[slice_t2][weights_t2 != 0]
+            if transition_map is None:
+                # The first iteration starts from an all-ones transition map.
+                prob = np.full(
+                    (len(idx_t1), len(idx_t2)), float(sparsity_threshold <= 1)
                 )
+            else:
+                prob = transition_map[idx_t1][:, idx_t2].toarray()
+                prob[prob < row_cutoffs[idx_t1, None]] = 0
 
-        ## update offset
-        offset_N1 = offset_N1 + len(cell_id_array_t1)
-        offset_N2 = offset_N2 + len(cell_id_array_t2)
+            resol = 1e-10
+            if normalization_mode == 0:
+                prob = prob * (1 / (resol + prob.sum(axis=1)))[:, None]
+            else:
+                prob = prob / (resol + prob.sum())
+            weight = np.sqrt(
+                weights_t1[weights_t1 > 0].mean() * weights_t2[weights_t2 > 0].mean()
+            )
 
-    ## rescale
-    new_coupling_matrix = new_coupling_matrix / (new_coupling_matrix.toarray().max())
+            row, col = np.nonzero(prob)
+            rows.append(idx_t1[row])
+            columns.append(idx_t2[col])
+            values.append(proportion[pair] * prob[row, col] * weight)
 
-    ## convert to sparse matrix form
-    new_coupling_matrix = new_coupling_matrix.tocsr()
+        offset_t1 += len(cells_t1)
+        offset_t2 += len(cells_t2)
 
-    logg.hint("Start to smooth the refined clonal map")
-    t = time.time()
-    temp = new_coupling_matrix * final_similarity
-
-    logg.hint("Phase I: time elapsed -- ", time.time() - t)
-    smoothed_new_transition_map = initial_similarity.dot(temp)
-
-    logg.hint("Phase II: time elapsed -- ", time.time() - t)
-
-    # both return are numpy array
-    un_SM_transition_map = new_coupling_matrix.toarray()
-    return smoothed_new_transition_map, un_SM_transition_map
+    if not values:
+        return ssp.csr_matrix(shape)
+    return ssp.csr_matrix(
+        (np.concatenate(values), (np.concatenate(rows), np.concatenate(columns))),
+        shape=shape,
+    )
 
 
 def refine_Tmap_through_cospar_noSmooth(
@@ -165,121 +89,42 @@ def refine_Tmap_through_cospar_noSmooth(
     sparsity_threshold=0.1,
     normalization_mode=1,
 ):
-    """
-    This performs one iteration of coherent sparsity optimization
-
-    This is the same as 'refine_Tmap_through_cospar', except that
-    there is no smoothing in the end.
-
-    Parameters
-    ----------
-    MultiTime_cell_id_array_t1: `np.array`
-        an array of cell id sub_array, where each sub_array consists of
-        clonally-related cell id's at different time points
-    MultiTime_cell_id_array_t2: `np.array`
-        an corresponding array of sub_array, where each sub_array are id's of
-        cells that are clonally related to the corresponding sub_array at
-        MultiTime_cell_id_array_t1.
-    proportion: `list`
-        A weight factor for each time point.
-    transition_map: `np.array` or `sp.spmatrix`
-        initialized transition map, or map from a previous iteration.
-    X_clone: `sp.spmatrix`
-        clonal matrix
-    initial_similarity: `np.array`
-        similarity matrix for all cells belonging
-        to MultiTime_cell_id_array_t1
-    final_similarity: `np.array`
-        similarity matrix for all cells belonging
-        to MultiTime_cell_id_array_t2
-    sparsity_threshold: `float`, optional (default: 0.1)
-        noise threshold to remove noises in the updated transition map,
-        in the range [0,1]
-    normalization_mode: `int`, optional (default: 1)
-        Normalization method. Choice: [0,1].
-        0, single-cell normalization; 1, Clone normalization. The clonal
-        normalization suppresses the contribution of large
-        clones, and is much more robust.
-
-    Returns
-    -------
-    un_SM_transition_map: `np.array`
-    """
-
-    if not isinstance(X_clone[0, 0], bool):
-        X_clone = X_clone.astype(bool)
-
-    resol = 10 ** (-10)
-
-    if normalization_mode == 0:
-        logg.hint("Single-cell normalization")
-    if normalization_mode == 1:
-        logg.hint("Clone normalization")
-
-    transition_map = hf.matrix_row_or_column_thresholding(
-        transition_map, sparsity_threshold, row_threshold=True
+    """Compute the intraclone transition map using binary clone membership."""
+    return _build_clone_coupling(
+        MultiTime_cell_id_array_t1,
+        MultiTime_cell_id_array_t2,
+        proportion,
+        ssp.csr_matrix(transition_map),
+        ssp.csr_matrix(X_clone, dtype=bool),
+        sparsity_threshold,
+        normalization_mode,
     )
 
-    if not ssp.issparse(transition_map):
-        transition_map = ssp.csr_matrix(transition_map)
-    if not ssp.issparse(X_clone):
-        X_clone = ssp.csr_matrix(X_clone)
 
-    cell_N, clone_N = X_clone.shape
-    N1, N2 = transition_map.shape
-    new_coupling_matrix = ssp.lil_matrix((N1, N2))
+def _smooth_coupling(
+    coupling, initial_similarity, final_similarity, threshold, sample=None
+):
+    """Smooth in row blocks and save raw values only for the convergence sample."""
+    initial = ssp.csr_matrix(initial_similarity)
+    right = coupling @ ssp.csr_matrix(final_similarity)
+    blocks = []
+    for start, end in tmap_util.sparse_row_blocks((initial.shape[0], right.shape[1])):
+        block = initial[start:end] @ right
+        if sample is not None:
+            sample_rows, sample_cols, sample_values = sample
+            idx = (sample_rows >= start) & (sample_rows < end)
+            if idx.any():
+                sample_values[idx] = block[sample_rows[idx] - start][
+                    :, sample_cols
+                ].toarray()
+        blocks.append(tmap_util.prune_csr_rows(block, threshold))
+    return ssp.vstack(blocks, format="csr")
 
-    offset_N1 = 0
-    offset_N2 = 0
-    for j in range(len(MultiTime_cell_id_array_t1)):
 
-        logg.hint("Relative time point pair index:", j)
-        cell_id_array_t1 = MultiTime_cell_id_array_t1[j]
-        cell_id_array_t2 = MultiTime_cell_id_array_t2[j]
-
-        for clone_id in range(clone_N):
-
-            if clone_id % 1000 == 0:
-                logg.hint("Clone id:", clone_id)
-            idx1 = X_clone[cell_id_array_t1, clone_id].toarray().flatten()
-            idx2 = X_clone[cell_id_array_t2, clone_id].toarray().flatten()
-            if idx1.sum() > 0 and idx2.sum() > 0:
-                ## update the new_coupling matrix
-                id_1 = offset_N1 + np.nonzero(idx1)[0]
-                id_2 = offset_N2 + np.nonzero(idx2)[0]
-                prob = transition_map[id_1][:, id_2].toarray()
-
-                ## try row normalization
-                if normalization_mode == 0:
-                    prob = hf.sparse_rowwise_multiply(
-                        prob, 1 / (resol + np.sum(prob, 1))
-                    )  # cell-level normalization
-                else:
-                    prob = prob / (
-                        resol + np.sum(prob)
-                    )  # clone level normalization, account for proliferation
-
-                weight_factor = np.sqrt(
-                    np.mean(idx1[idx1 > 0]) * np.mean(idx2[idx2 > 0])
-                )  # the contribution of a particular clone can be tuned by its average entries
-                if weight_factor > 1:
-                    logg.hint("marker gene weight", weight_factor)
-
-                # Use the add mode, add up contributions from each clone
-                new_coupling_matrix[id_1[:, np.newaxis], id_2] = (
-                    new_coupling_matrix[id_1[:, np.newaxis], id_2]
-                    + proportion[j] * prob * weight_factor
-                )
-
-        ## update offset
-        offset_N1 = offset_N1 + len(cell_id_array_t1)
-        offset_N2 = offset_N2 + len(cell_id_array_t2)
-
-    ## convert to sparse matrix form
-    new_coupling_matrix = new_coupling_matrix.tocsr()
-    #
-    un_SM_transition_map = new_coupling_matrix
-    return un_SM_transition_map
+def _convergence_indices(size, limit):
+    if size < limit:
+        return np.arange(size)
+    return np.concatenate([np.arange(offset, size, 3) for offset in range(3)])[:limit]
 
 
 def infer_Tmap_from_multitime_clones_private(
@@ -302,9 +147,8 @@ def infer_Tmap_from_multitime_clones_private(
     Same as :func:`.infer_Tmap_from_multitime_clones` except that it
     assumes that the adata object has been prepared for targeted
     time points. It generates the similarity matrix
-    via :func:`.tmap_util.generate_similarity_matrix`, and iteratively calls
-    the core function :func:`.refine_Tmap_through_cospar` to update
-    the transition map.
+    via :func:`.tmap_util.generate_similarity_matrix` and iteratively smooths
+    the within-clone transitions to update the transition map.
 
     Parameters
     ----------
@@ -419,84 +263,57 @@ def infer_Tmap_from_multitime_clones_private(
 
     if "Smatrix" not in adata.uns.keys():
         logg.hint("Load from hard disk--------")
+        if use_full_Smatrix:
+            expected_size = len(sp_idx)
+            original_ids = np.flatnonzero(sp_idx)
+        else:
+            expected_size = adata.n_obs
+            original_ids = np.arange(adata.n_obs)
+
+        clonal_t1 = original_ids[clonal_cell_id_t1]
+        clonal_t2 = original_ids[clonal_cell_id_t2]
+        states_t1 = original_ids[Tmap_cell_id_t1]
+        states_t2 = original_ids[Tmap_cell_id_t2]
+        loaded = {}
         for round_of_smooth in smooth_array:
-            # we cannot force it to compute new at this time. Otherwise, if we use_full_Smatrix, the resulting similarity is actually from adata, thus not full similarity.
-
-            re_compute = (not use_full_Smatrix) and (
-                compute_new_Smatrix
-            )  # re-compute only when not using full similarity
-            similarity_matrix_full = tmap_util.generate_similarity_matrix(
-                adata,
-                similarity_file_name,
-                round_of_smooth=round_of_smooth,
-                neighbor_N=neighbor_N,
-                truncation_threshold=trunca_threshold[0],
-                save_subset=save_subset,
-                compute_new_Smatrix=re_compute,
-            )
-
-            ## add dimensionality check
-            if (similarity_matrix_full.shape[0] != len(sp_idx)) or (
-                similarity_matrix_full.shape[1] != len(sp_idx)
-            ):
-                raise ValueError(
-                    "The pre-computed similarity matrix does not have the right dimension.\n"
-                    "Possible reason: this is computed from a different dataset, but with the same data label in adata.uns['data_des']\n"
-                    "You can fix this issue by running the Tmap inference with compute_new=True, which compute everything from scratch.\n"
-                    "To avoid this from happening again, please use a different data_des for each new data, which can be set with adata.uns['data_des']=['Your_data_des']."
+            if round_of_smooth not in loaded:
+                similarity = tmap_util.generate_similarity_matrix(
+                    adata,
+                    similarity_file_name,
+                    round_of_smooth=round_of_smooth,
+                    neighbor_N=neighbor_N,
+                    truncation_threshold=trunca_threshold[0],
+                    save_subset=save_subset,
+                    compute_new_Smatrix=not use_full_Smatrix and compute_new_Smatrix,
                 )
-
-            if use_full_Smatrix:
-                # pdb.set_trace()
-                similarity_matrix_full_sp = similarity_matrix_full[sp_idx][:, sp_idx]
-
-                ### minimum similarity matrix that only involves the multi-time clones
-                initial_similarity = tmap_util.generate_initial_similarity(
-                    similarity_matrix_full_sp, clonal_cell_id_t1, clonal_cell_id_t1
-                )
-                final_similarity = tmap_util.generate_final_similarity(
-                    similarity_matrix_full_sp, clonal_cell_id_t2, clonal_cell_id_t2
-                )
-
+                if similarity.shape != (expected_size, expected_size):
+                    raise ValueError(
+                        "The pre-computed similarity matrix does not have the right dimension.\n"
+                        "Use a unique adata.uns['data_des'] or rerun with compute_new=True."
+                    )
+                initial = similarity[clonal_t1][:, clonal_t1]
+                final = similarity[clonal_t2][:, clonal_t2].T.tocsr()
+                initial_ext = final_ext = None
                 if extend_Tmap_space:
-                    initial_similarity_ext = tmap_util.generate_initial_similarity(
-                        similarity_matrix_full_sp, Tmap_cell_id_t1, clonal_cell_id_t1
-                    )
-                    final_similarity_ext = tmap_util.generate_final_similarity(
-                        similarity_matrix_full_sp, clonal_cell_id_t2, Tmap_cell_id_t2
-                    )
+                    initial_ext = similarity[states_t1][:, clonal_t1]
+                    final_ext = similarity[states_t2][:, clonal_t2].T.tocsr()
+                loaded[round_of_smooth] = initial, final, initial_ext, final_ext
+                del similarity
 
-            else:
-                initial_similarity = tmap_util.generate_initial_similarity(
-                    similarity_matrix_full, clonal_cell_id_t1, clonal_cell_id_t1
-                )
-                final_similarity = tmap_util.generate_final_similarity(
-                    similarity_matrix_full, clonal_cell_id_t2, clonal_cell_id_t2
-                )
-
-                if extend_Tmap_space:
-                    initial_similarity_ext = tmap_util.generate_initial_similarity(
-                        similarity_matrix_full, Tmap_cell_id_t1, clonal_cell_id_t1
-                    )
-                    final_similarity_ext = tmap_util.generate_final_similarity(
-                        similarity_matrix_full, clonal_cell_id_t2, Tmap_cell_id_t2
-                    )
-
-            initial_similarity_array.append(initial_similarity)
-            final_similarity_array.append(final_similarity)
+            initial, final, initial_ext, final_ext = loaded[round_of_smooth]
+            initial_similarity_array.append(initial)
+            final_similarity_array.append(final)
             if extend_Tmap_space:
-                initial_similarity_array_ext.append(initial_similarity_ext)
-                final_similarity_array_ext.append(final_similarity_ext)
+                initial_similarity_array_ext.append(initial_ext)
+                final_similarity_array_ext.append(final_ext)
 
-        # loading the map is too costly. We attach it to adata, and remove that after Tmap inference
-        # This is useful only for the joint optimization.
-        adata.uns["Smatrix"] = {}
-        adata.uns["Smatrix"]["initial_similarity_array"] = initial_similarity_array
-        adata.uns["Smatrix"]["final_similarity_array"] = final_similarity_array
-        adata.uns["Smatrix"][
-            "initial_similarity_array_ext"
-        ] = initial_similarity_array_ext
-        adata.uns["Smatrix"]["final_similarity_array_ext"] = final_similarity_array_ext
+        # Joint optimization reuses the extracted similarity blocks across calls.
+        adata.uns["Smatrix"] = {
+            "initial_similarity_array": initial_similarity_array,
+            "final_similarity_array": final_similarity_array,
+            "initial_similarity_array_ext": initial_similarity_array_ext,
+            "final_similarity_array_ext": final_similarity_array_ext,
+        }
 
     else:
         logg.hint("Copy from adata (pre-loaded)--------")
@@ -507,78 +324,46 @@ def infer_Tmap_from_multitime_clones_private(
         ]
         final_similarity_array_ext = adata.uns["Smatrix"]["final_similarity_array_ext"]
 
-    #### Compute the core of the transition map that involve multi-time clones, then extend to other cell states
-    transition_map = np.ones((len(clonal_cell_id_t1), len(clonal_cell_id_t2)))
-    # transition_map_array=[transition_map_v1]
+    transition_map = None
+    X_clone = ssp.csr_matrix(clone_annot)
+    sample_rows = _convergence_indices(len(clonal_cell_id_t1), 50)
+    sample_cols = _convergence_indices(len(clonal_cell_id_t2), 100)
+    sample_shape = (len(sample_rows), len(sample_cols))
+    X_map_1 = np.full(sample_shape, float(sparsity_threshold <= 1))
+    final_threshold = intraclone_threshold
+    if not extend_Tmap_space:
+        final_threshold = min(final_threshold, trunca_threshold[1])
 
-    X_clone = clone_annot.copy()
-    if not ssp.issparse(X_clone):
-        X_clone = ssp.csr_matrix(X_clone)
-
-    # smooth_iter_N=len(smooth_array)
     for j in range(max_iter_N):
-
-        # transition_map=Tmap_temp
-        if j < len(smooth_array):
-
-            logg.info(f"Iteration {j+1}, Use smooth_round={smooth_array[j]}")
-            used_initial_similarity = initial_similarity_array[j]
-            used_final_similarity = final_similarity_array[j]
-        else:
-
-            logg.info(f"Iteration {j+1}, Use smooth_round={smooth_array[-1]}")
-            used_initial_similarity = initial_similarity_array[-1]
-            used_final_similarity = final_similarity_array[-1]
-
-        transition_map_new, unSM_sc_coupling = refine_Tmap_through_cospar(
+        depth_idx = min(j, len(smooth_array) - 1)
+        logg.info(f"Iteration {j+1}, Use smooth_round={smooth_array[depth_idx]}")
+        coupling = _build_clone_coupling(
             multiTime_cell_id_t1,
             multiTime_cell_id_t2,
             proportion,
             transition_map,
             X_clone,
-            used_initial_similarity,
-            used_final_similarity,
-            sparsity_threshold=sparsity_threshold,
-            normalization_mode=normalization_mode,
+            sparsity_threshold,
+            normalization_mode,
         )
+        del transition_map
+        scale = coupling.max()
+        if scale != 0:
+            coupling.data /= scale
 
-        ########################### Convergency test
-        # sample cell states to convergence test
-        sample_N_x = 50
-        sample_N_y = 100
-        t0 = time.time()
-        cell_N_tot_x = transition_map.shape[0]
-        if cell_N_tot_x < sample_N_x:
-            sample_id_temp_x = np.arange(cell_N_tot_x)
-        else:
-            xx = np.arange(cell_N_tot_x)
-            yy = (
-                list(np.nonzero(xx % 3 == 0)[0])
-                + list(np.nonzero(xx % 3 == 1)[0])
-                + list(np.nonzero(xx % 3 == 2)[0])
-            )
-            sample_id_temp_x = yy[:sample_N_x]
+        threshold = sparsity_threshold
+        if j + 1 == max_iter_N or (j >= 2 and j + 1 >= len(smooth_array)):
+            threshold = min(threshold, final_threshold)
 
-        cell_N_tot_y = transition_map.shape[1]
-        if cell_N_tot_y < sample_N_y:
-            sample_id_temp_y = np.arange(cell_N_tot_y)
-        else:
-            xx = np.arange(cell_N_tot_y)
-            yy = (
-                list(np.nonzero(xx % 3 == 0)[0])
-                + list(np.nonzero(xx % 3 == 1)[0])
-                + list(np.nonzero(xx % 3 == 2)[0])
-            )
-            sample_id_temp_y = yy[:sample_N_y]
-
-        # transition_map is changed bytmap_core.refine_Tmap_through_cospar (thresholding). So, we only use transition_map_new to update
-        if j == 0:
-            X_map_0 = transition_map[sample_id_temp_x, :][:, sample_id_temp_y]
-        else:
-            X_map_0 = X_map_1.copy()
-
-        X_map_1 = transition_map_new[sample_id_temp_x, :][:, sample_id_temp_y].copy()
-        transition_map = transition_map_new
+        X_map_0 = X_map_1
+        X_map_1 = np.empty(sample_shape)
+        transition_map = _smooth_coupling(
+            coupling,
+            initial_similarity_array[depth_idx],
+            final_similarity_array[depth_idx],
+            threshold,
+            sample=(sample_rows, sample_cols, X_map_1),
+        )
 
         if (j >= 2) and (
             j + 1 >= len(smooth_array)
@@ -605,43 +390,19 @@ def infer_Tmap_from_multitime_clones_private(
                 break
         #############################
 
-    ### expand the map to other cell states
-    if not extend_Tmap_space:
-
-        logg.hint(
-            "No need for Final Smooth (i.e., clonally-labeled states are the final state space for Tmap)"
+    if extend_Tmap_space:
+        logg.hint("Final round of Smooth (expand to include non-clonal states)")
+        adata.uns["transition_map"] = _smooth_coupling(
+            coupling,
+            initial_similarity_array_ext[depth_idx],
+            final_similarity_array_ext[depth_idx],
+            trunca_threshold[1],
         )
-
-        transition_map = hf.matrix_row_or_column_thresholding(
-            transition_map, threshold=trunca_threshold[1], row_threshold=True
-        )
-        adata.uns["transition_map"] = ssp.csr_matrix(transition_map)
     else:
-
-        logg.hint(
-            "Final round of Smooth (to expand the state space of Tmap to include non-clonal states)"
+        # The legacy intraclone refinement also used this final truncation.
+        adata.uns["transition_map"] = tmap_util.prune_csr_rows(
+            transition_map, trunca_threshold[1]
         )
-
-        if j < len(smooth_array):
-            used_initial_similarity_ext = initial_similarity_array_ext[j]
-            used_final_similarity_ext = final_similarity_array_ext[j]
-        else:
-            used_initial_similarity_ext = initial_similarity_array_ext[-1]
-            used_final_similarity_ext = final_similarity_array_ext[-1]
-
-        unSM_sc_coupling = ssp.csr_matrix(unSM_sc_coupling)
-        t = time.time()
-        temp = unSM_sc_coupling * used_final_similarity_ext
-
-        logg.hint("Phase I: time elapsed -- ", time.time() - t)
-        transition_map_1 = used_initial_similarity_ext.dot(temp)
-
-        logg.hint("Phase II: time elapsed -- ", time.time() - t)
-
-        transition_map_1 = hf.matrix_row_or_column_thresholding(
-            transition_map_1, threshold=trunca_threshold[1], row_threshold=True
-        )
-        adata.uns["transition_map"] = ssp.csr_matrix(transition_map_1)
 
     logg.hint("----Intraclone transition map----")
 
@@ -661,9 +422,14 @@ def infer_Tmap_from_multitime_clones_private(
     idx_t2 = hf.converting_id_from_fullSpace_to_subSpace(
         clonal_cell_id_t2, Tmap_cell_id_t2
     )[0]
-    demultiplexed_map = np.zeros((len(Tmap_cell_id_t1), len(Tmap_cell_id_t2)))
-    demultiplexed_map[idx_t1[:, np.newaxis], idx_t2] = demultiplexed_map_0.toarray()
-    adata.uns["intraclone_transition_map"] = ssp.csr_matrix(demultiplexed_map)
+    demultiplexed_map_0 = demultiplexed_map_0.tocoo()
+    adata.uns["intraclone_transition_map"] = ssp.csr_matrix(
+        (
+            demultiplexed_map_0.data,
+            (idx_t1[demultiplexed_map_0.row], idx_t2[demultiplexed_map_0.col]),
+        ),
+        shape=(len(Tmap_cell_id_t1), len(Tmap_cell_id_t2)),
+    )
 
 
 ## This is just used for testing WOT

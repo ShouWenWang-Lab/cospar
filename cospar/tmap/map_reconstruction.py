@@ -38,9 +38,8 @@ def infer_Tmap_from_multitime_clones(
 
     It prepares adata object for cells of targeted time points by
     :func:`cospar.tmap._utils.select_time_points`, generates the similarity matrix
-    via :func:`cospar.tmap._utils.generate_similarity_matrix`, and iteratively calls
-    the core function :func:`.refine_Tmap_through_cospar` to update
-    the transition map.
+    via :func:`cospar.tmap._utils.generate_similarity_matrix`, and iteratively
+    smooths the within-clone transitions to update the transition map.
 
     * If `later_time_point=None`, the inferred map allows transitions
       between neighboring time points. For example, if
@@ -167,7 +166,7 @@ def infer_Tmap_from_multitime_clones(
             os.path.exists(similarity_file_name + f"_SM{round_of_smooth}.npz")
             and (not compute_new)
         ):
-            similarity_matrix_full = tmap_util.generate_similarity_matrix(
+            tmap_util.generate_similarity_matrix(
                 adata_orig,
                 similarity_file_name,
                 round_of_smooth=round_of_smooth,
@@ -217,10 +216,9 @@ def infer_Tmap_from_multitime_clones(
 
     else:
         # compute transition map between initial time points and the later time point
-        # sel_id = np.nonzero(np.isin(clonal_time_points, later_time_point))[0][0]
-        if later_time_point in clonal_time_points:
-            clonal_time_points.remove(later_time_point)
-        initial_time_points = clonal_time_points  # [:sel_id]
+        initial_time_points = [
+            point for point in clonal_time_points if point != later_time_point
+        ]
 
         time_info_orig = np.array(adata_orig.obs["time_info"])
         sp_idx = np.zeros(adata_orig.shape[0], dtype=bool)
@@ -252,12 +250,8 @@ def infer_Tmap_from_multitime_clones(
         adata.uns["clonal_cell_id_t1"] = Tmap_cell_id_t1
         adata.uns["clonal_cell_id_t2"] = Tmap_cell_id_t2
         adata.uns["sp_idx"] = sp_idx
-        data_path = settings.data_path
-
-        transition_map = np.zeros((len(Tmap_cell_id_t1), len(Tmap_cell_id_t2)))
-        intraclone_transition_map = np.zeros(
-            (len(Tmap_cell_id_t1), len(Tmap_cell_id_t2))
-        )
+        row_indices = []
+        pair_maps = {"transition_map": [], "intraclone_transition_map": []}
 
         logg.info(
             "------Infer transition map between initial time points and the later time one------"
@@ -292,18 +286,14 @@ def infer_Tmap_from_multitime_clones(
                 temp_id_t1, Tmap_cell_id_t1
             )[0]
 
-            transition_map[sp_id_t1, :] = adata_temp.uns["transition_map"].toarray()
-            intraclone_transition_map[sp_id_t1, :] = adata_temp.uns[
-                "intraclone_transition_map"
-            ].toarray()
+            row_indices.append(sp_id_t1)
+            for key in pair_maps:
+                pair_maps[key].append(adata_temp.uns[key])
+            del adata_temp
 
-            if "Smatrix" in adata_temp.uns.keys():
-                adata_temp.uns.pop("Smatrix")
-
-        adata.uns["transition_map"] = ssp.csr_matrix(transition_map)
-        adata.uns["intraclone_transition_map"] = ssp.csr_matrix(
-            intraclone_transition_map
-        )
+        row_order = np.argsort(np.concatenate(row_indices))
+        for key, matrices in pair_maps.items():
+            adata.uns[key] = ssp.vstack(matrices, format="csr")[row_order]
 
         logg.info(f"-----------Total used time: {time.time()-t0} s ------------")
         return adata
@@ -888,7 +878,7 @@ def infer_Tmap_from_one_time_clones_twoTime(
                 os.path.exists(similarity_file_name + f"_SM{round_of_smooth}.npz")
                 and (not compute_new)
             ):
-                similarity_matrix_full = tmap_util.generate_similarity_matrix(
+                tmap_util.generate_similarity_matrix(
                     adata_orig,
                     similarity_file_name,
                     round_of_smooth=round_of_smooth,
